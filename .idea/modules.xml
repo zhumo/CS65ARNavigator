@@ -3,6 +3,8 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/ARNavigation.iml" filepath="$PROJECT_DIR$/ARNavigation.iml" />
+      <module fileurl="file://$PROJECT_DIR$/CS65ARNavigator.iml" filepath="$PROJECT_DIR$/CS65ARNavigator.iml" />
+      <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
   </component>
