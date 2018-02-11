@@ -29,7 +29,10 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps">
+            android:label="@string/title_activity_maps"/>
+        <activity
+            android:name=".PermissionsActivity"
+            android:label="@string/title_activity_permissions">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
