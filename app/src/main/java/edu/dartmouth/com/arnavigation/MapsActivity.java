@@ -4,6 +4,8 @@ import android.Manifest;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.PackageManager;
+import android.location.Criteria;
+import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.support.annotation.NonNull;
@@ -49,16 +51,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        // Add a marker in Sydney and move the camera
-        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        // Ignore this error because onCreate ensures location permission exists.
+        mMap.setMyLocationEnabled(true);
+
+        Criteria locationProviderCriteria = new Criteria();
+        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+        String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
+        // Ignore this error because onCreate ensures location permission exists.
+        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+
+        // Move the camera to last known location
+        LatLng lastKnownLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private void ensureLocationPermission() {
         if(Build.VERSION.SDK_INT < 23) { return; }
 
-        if(!hasLocationPermission()) {
+        if(hasLocationPermission()) {
+            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        } else {
             requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 0);
         }
     }
