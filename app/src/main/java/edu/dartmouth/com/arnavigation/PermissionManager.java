@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.support.annotation.Nullable;
 import android.util.Log;
 
 /**
@@ -12,9 +13,12 @@ import android.util.Log;
  */
 
 public class PermissionManager {
-    public static void ensurePermission(String permission, Activity originatingActivity, int requestCode, OnHasPermission listener) {
+
+    public static void ensurePermission(String permission, Activity originatingActivity, int requestCode, @Nullable OnHasPermission listener) {
         if(hasPermission(permission, originatingActivity)) {
-            listener.onHasPermission();
+            if(listener != null) {
+                listener.onHasPermission();
+            }
         } else {
             Intent permissionsActivityIntent = new Intent(originatingActivity, PermissionsActivity.class);
             permissionsActivityIntent.putExtra(PermissionsActivity.PERMISSION_KEY, permission);

@@ -39,7 +39,7 @@ public class PermissionsActivity extends Activity {
             Intent resultIntent = new Intent();
             setResult(Activity.RESULT_OK, resultIntent);
             finish();
-        } else if(shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION)) {
+        } else if(shouldShowRequestPermissionRationale(requestedPermission)) {
             AlertDialog.Builder builder = new AlertDialog.Builder(this);
             builder.setTitle("Important Permission Required");
             builder.setMessage("This feature requires some permissions to work. Please grant these permissions.");
