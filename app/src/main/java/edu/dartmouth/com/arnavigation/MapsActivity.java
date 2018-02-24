@@ -12,6 +12,7 @@ import android.os.Build;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -74,6 +75,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         startActivity(permissionsActivityIntent);
     }
 
+    public void cameraButtonClicked(View view) {
+        Intent cameraActivityIntent = new Intent(this, CameraActivity.class);
+        startActivity(cameraActivityIntent);
+    }
 
     private boolean hasLocationPermission() {
         if(Build.VERSION.SDK_INT < 23) { return true; }
