@@ -20,7 +20,7 @@
         android:layout_alignParentEnd="true"
         android:src="@android:drawable/ic_menu_camera"
         android:scaleType="center"
-        android:onClick="cameraButtonClicked"
+        android:onClick="activateCamera"
         android:layout_margin="@dimen/fab_margin" />
 
 </RelativeLayout>

@@ -31,16 +31,16 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps" />
-        <activity
-            android:name=".PermissionsActivity"
-            android:label="@string/title_activity_permissions">
+            android:label="@string/title_activity_maps" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity
+            android:name=".PermissionsActivity"
+            android:label="@string/title_activity_permissions"/>
         <activity
             android:name=".CameraActivity"
             android:label="@string/title_activity_camera"/>
