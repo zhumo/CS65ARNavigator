@@ -114,7 +114,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public class RaiseGestureReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
+            Log.d("mztag", "received!");
             Intent cameraActivityIntent = new Intent(MapsActivity.this, CameraActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
             startActivity(cameraActivityIntent);
         }
     }
