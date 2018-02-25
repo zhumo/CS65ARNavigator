@@ -3,9 +3,11 @@ package edu.dartmouth.com.arnavigation;
 import android.Manifest;
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
@@ -17,6 +19,7 @@ import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.View;
+import android.widget.TextView;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -29,6 +32,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private LocationManager locationManager;
 
+    private RaiseGestureReceiver raiseGestureReceiver = new RaiseGestureReceiver();
+
     private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
 
     @Override
@@ -39,6 +44,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Intent raiseGestureServiceIntent = new Intent(this, RaiseGestureService.class);
+        startService(raiseGestureServiceIntent);
+
+        registerReceiver(raiseGestureReceiver, new IntentFilter(RaiseGestureService.PHONE_RAISED_ACTION));
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Intent raiseGestureServiceIntent = new Intent(this, RaiseGestureService.class);
+        stopService(raiseGestureServiceIntent);
+
+        unregisterReceiver(raiseGestureReceiver);
     }
 
     @Override
@@ -85,6 +108,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         if(requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if(resultCode == Activity.RESULT_OK) { setupMap(); }
             else { finish(); }
+        }
+    }
+
+    public class RaiseGestureReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Intent cameraActivityIntent = new Intent(MapsActivity.this, CameraActivity.class);
+            startActivity(cameraActivityIntent);
         }
     }
 }
