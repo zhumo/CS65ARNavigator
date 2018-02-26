@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-/** Shader helper functions. */
+/**
+ * Shader helper functions.
+ */
 public class ShaderUtil {
   /**
    * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
@@ -63,15 +65,10 @@ public class ShaderUtil {
    * @throws RuntimeException If an OpenGL error is detected.
    */
   public static void checkGLError(String tag, String label) {
-    int lastError = GLES20.GL_NO_ERROR;
-    // Drain the queue of all errors.
     int error;
     while ((error = GLES20.glGetError()) != GLES20.GL_NO_ERROR) {
       Log.e(tag, label + ": glError " + error);
-      lastError = error;
-    }
-    if (lastError != GLES20.GL_NO_ERROR) {
-      throw new RuntimeException(label + ": glError " + lastError);
+      throw new RuntimeException(label + ": glError " + error);
     }
   }
 

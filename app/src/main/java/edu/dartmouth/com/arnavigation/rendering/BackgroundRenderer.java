@@ -14,25 +14,26 @@
  */
 package edu.dartmouth.com.arnavigation.rendering;
 
+import com.google.ar.core.Frame;
+import com.google.ar.core.Session;
+import edu.dartmouth.com.arnavigation.R;
+
 import android.content.Context;
 import android.opengl.GLES11Ext;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 
-import com.google.ar.core.Frame;
-import com.google.ar.core.Session;
-import edu.dartmouth.com.arnavigation.R;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import edu.dartmouth.com.arnavigation.rendering.ShaderUtil;
+
 /**
- * This class renders the AR background from camera feed. It creates and hosts the texture given to
- * ARCore to be filled with the camera image.
+ * This class renders the AR background from camera feed. It creates and hosts the texture
+ * given to ARCore to be filled with the camera image.
  */
 public class BackgroundRenderer {
   private static final String TAG = BackgroundRenderer.class.getSimpleName();
@@ -41,40 +42,40 @@ public class BackgroundRenderer {
   private static final int TEXCOORDS_PER_VERTEX = 2;
   private static final int FLOAT_SIZE = 4;
 
-  private FloatBuffer quadVertices;
-  private FloatBuffer quadTexCoord;
-  private FloatBuffer quadTexCoordTransformed;
+  private FloatBuffer mQuadVertices;
+  private FloatBuffer mQuadTexCoord;
+  private FloatBuffer mQuadTexCoordTransformed;
 
-  private int quadProgram;
+  private int mQuadProgram;
 
-  private int quadPositionParam;
-  private int quadTexCoordParam;
-  private int textureId = -1;
-
-  public BackgroundRenderer() {}
+  private int mQuadPositionParam;
+  private int mQuadTexCoordParam;
+  private int mTextureId = -1;
+  private int mTextureTarget = GLES11Ext.GL_TEXTURE_EXTERNAL_OES;
+  public BackgroundRenderer() {
+  }
 
   public int getTextureId() {
-    return textureId;
+    return mTextureId;
   }
 
   /**
-   * Allocates and initializes OpenGL resources needed by the background renderer. Must be called on
-   * the OpenGL thread, typically in {@link GLSurfaceView.Renderer#onSurfaceCreated(GL10,
-   * EGLConfig)}.
+   * Allocates and initializes OpenGL resources needed by the background renderer.  Must be
+   * called on the OpenGL thread, typically in
+   * {@link GLSurfaceView.Renderer#onSurfaceCreated(GL10, EGLConfig)}.
    *
    * @param context Needed to access shader source.
    */
   public void createOnGlThread(Context context) {
     // Generate the background texture.
-    int[] textures = new int[1];
+    int textures[] = new int[1];
     GLES20.glGenTextures(1, textures, 0);
-    textureId = textures[0];
-    int textureTarget = GLES11Ext.GL_TEXTURE_EXTERNAL_OES;
-    GLES20.glBindTexture(textureTarget, textureId);
-    GLES20.glTexParameteri(textureTarget, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
-    GLES20.glTexParameteri(textureTarget, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
-    GLES20.glTexParameteri(textureTarget, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
-    GLES20.glTexParameteri(textureTarget, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
+    mTextureId = textures[0];
+    GLES20.glBindTexture(mTextureTarget, mTextureId);
+    GLES20.glTexParameteri(mTextureTarget, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+    GLES20.glTexParameteri(mTextureTarget, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+    GLES20.glTexParameteri(mTextureTarget, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+    GLES20.glTexParameteri(mTextureTarget, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_NEAREST);
 
     int numVertices = 4;
     if (numVertices != QUAD_COORDS.length / COORDS_PER_VERTEX) {
@@ -83,56 +84,54 @@ public class BackgroundRenderer {
 
     ByteBuffer bbVertices = ByteBuffer.allocateDirect(QUAD_COORDS.length * FLOAT_SIZE);
     bbVertices.order(ByteOrder.nativeOrder());
-    quadVertices = bbVertices.asFloatBuffer();
-    quadVertices.put(QUAD_COORDS);
-    quadVertices.position(0);
+    mQuadVertices = bbVertices.asFloatBuffer();
+    mQuadVertices.put(QUAD_COORDS);
+    mQuadVertices.position(0);
 
-    ByteBuffer bbTexCoords =
-        ByteBuffer.allocateDirect(numVertices * TEXCOORDS_PER_VERTEX * FLOAT_SIZE);
+    ByteBuffer bbTexCoords = ByteBuffer.allocateDirect(
+            numVertices * TEXCOORDS_PER_VERTEX * FLOAT_SIZE);
     bbTexCoords.order(ByteOrder.nativeOrder());
-    quadTexCoord = bbTexCoords.asFloatBuffer();
-    quadTexCoord.put(QUAD_TEXCOORDS);
-    quadTexCoord.position(0);
+    mQuadTexCoord = bbTexCoords.asFloatBuffer();
+    mQuadTexCoord.put(QUAD_TEXCOORDS);
+    mQuadTexCoord.position(0);
 
-    ByteBuffer bbTexCoordsTransformed =
-        ByteBuffer.allocateDirect(numVertices * TEXCOORDS_PER_VERTEX * FLOAT_SIZE);
+    ByteBuffer bbTexCoordsTransformed = ByteBuffer.allocateDirect(
+            numVertices * TEXCOORDS_PER_VERTEX * FLOAT_SIZE);
     bbTexCoordsTransformed.order(ByteOrder.nativeOrder());
-    quadTexCoordTransformed = bbTexCoordsTransformed.asFloatBuffer();
+    mQuadTexCoordTransformed = bbTexCoordsTransformed.asFloatBuffer();
 
-    int vertexShader =
-        ShaderUtil.loadGLShader(TAG, context, GLES20.GL_VERTEX_SHADER, R.raw.screenquad_vertex);
-    int fragmentShader =
-        ShaderUtil.loadGLShader(
-            TAG, context, GLES20.GL_FRAGMENT_SHADER, R.raw.screenquad_fragment_oes);
+    int vertexShader = ShaderUtil.loadGLShader(TAG, context,
+            GLES20.GL_VERTEX_SHADER, R.raw.screenquad_vertex);
+    int fragmentShader = ShaderUtil.loadGLShader(TAG, context,
+            GLES20.GL_FRAGMENT_SHADER, R.raw.screenquad_fragment_oes);
 
-    quadProgram = GLES20.glCreateProgram();
-    GLES20.glAttachShader(quadProgram, vertexShader);
-    GLES20.glAttachShader(quadProgram, fragmentShader);
-    GLES20.glLinkProgram(quadProgram);
-    GLES20.glUseProgram(quadProgram);
+    mQuadProgram = GLES20.glCreateProgram();
+    GLES20.glAttachShader(mQuadProgram, vertexShader);
+    GLES20.glAttachShader(mQuadProgram, fragmentShader);
+    GLES20.glLinkProgram(mQuadProgram);
+    GLES20.glUseProgram(mQuadProgram);
 
     ShaderUtil.checkGLError(TAG, "Program creation");
 
-    quadPositionParam = GLES20.glGetAttribLocation(quadProgram, "a_Position");
-    quadTexCoordParam = GLES20.glGetAttribLocation(quadProgram, "a_TexCoord");
+    mQuadPositionParam = GLES20.glGetAttribLocation(mQuadProgram, "a_Position");
+    mQuadTexCoordParam = GLES20.glGetAttribLocation(mQuadProgram, "a_TexCoord");
 
     ShaderUtil.checkGLError(TAG, "Program parameters");
   }
 
   /**
-   * Draws the AR background image. The image will be drawn such that virtual content rendered with
-   * the matrices provided by {@link com.google.ar.core.Camera#getViewMatrix(float[], int)} and
-   * {@link com.google.ar.core.Camera#getProjectionMatrix(float[], int, float, float)} will
-   * accurately follow static physical objects. This must be called <b>before</b> drawing virtual
-   * content.
+   * Draws the AR background image.  The image will be drawn such that virtual content rendered
+   * with the matrices provided by {@link Frame#getViewMatrix(float[], int)} and
+   * {@link Session#getProjectionMatrix(float[], int, float, float)} will accurately follow
+   * static physical objects.  This must be called <b>before</b> drawing virtual content.
    *
    * @param frame The last {@code Frame} returned by {@link Session#update()}.
    */
   public void draw(Frame frame) {
     // If display rotation changed (also includes view size change), we need to re-query the uv
     // coordinates for the screen rect, as they may have changed as well.
-    if (frame.hasDisplayGeometryChanged()) {
-      frame.transformDisplayUvCoords(quadTexCoord, quadTexCoordTransformed);
+    if (frame.isDisplayRotationChanged()) {
+      frame.transformDisplayUvCoords(mQuadTexCoord, mQuadTexCoordTransformed);
     }
 
     // No need to test or write depth, the screen quad has arbitrary depth, and is expected
@@ -140,32 +139,27 @@ public class BackgroundRenderer {
     GLES20.glDisable(GLES20.GL_DEPTH_TEST);
     GLES20.glDepthMask(false);
 
-    GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, textureId);
+    GLES20.glBindTexture(GLES11Ext.GL_TEXTURE_EXTERNAL_OES, mTextureId);
 
-    GLES20.glUseProgram(quadProgram);
+    GLES20.glUseProgram(mQuadProgram);
 
     // Set the vertex positions.
     GLES20.glVertexAttribPointer(
-        quadPositionParam, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, 0, quadVertices);
+            mQuadPositionParam, COORDS_PER_VERTEX, GLES20.GL_FLOAT, false, 0, mQuadVertices);
 
     // Set the texture coordinates.
-    GLES20.glVertexAttribPointer(
-        quadTexCoordParam,
-        TEXCOORDS_PER_VERTEX,
-        GLES20.GL_FLOAT,
-        false,
-        0,
-        quadTexCoordTransformed);
+    GLES20.glVertexAttribPointer(mQuadTexCoordParam, TEXCOORDS_PER_VERTEX,
+            GLES20.GL_FLOAT, false, 0, mQuadTexCoordTransformed);
 
     // Enable vertex arrays
-    GLES20.glEnableVertexAttribArray(quadPositionParam);
-    GLES20.glEnableVertexAttribArray(quadTexCoordParam);
+    GLES20.glEnableVertexAttribArray(mQuadPositionParam);
+    GLES20.glEnableVertexAttribArray(mQuadTexCoordParam);
 
     GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
 
     // Disable vertex arrays
-    GLES20.glDisableVertexAttribArray(quadPositionParam);
-    GLES20.glDisableVertexAttribArray(quadTexCoordParam);
+    GLES20.glDisableVertexAttribArray(mQuadPositionParam);
+    GLES20.glDisableVertexAttribArray(mQuadTexCoordParam);
 
     // Restore the depth state for further drawing.
     GLES20.glDepthMask(true);
@@ -174,16 +168,17 @@ public class BackgroundRenderer {
     ShaderUtil.checkGLError(TAG, "Draw");
   }
 
-  private static final float[] QUAD_COORDS =
-      new float[] {
-        -1.0f, -1.0f, 0.0f, -1.0f, +1.0f, 0.0f, +1.0f, -1.0f, 0.0f, +1.0f, +1.0f, 0.0f,
-      };
+  public static final float[] QUAD_COORDS = new float[]{
+          -1.0f, -1.0f, 0.0f,
+          -1.0f, +1.0f, 0.0f,
+          +1.0f, -1.0f, 0.0f,
+          +1.0f, +1.0f, 0.0f,
+  };
 
-  private static final float[] QUAD_TEXCOORDS =
-      new float[] {
-        0.0f, 1.0f,
-        0.0f, 0.0f,
-        1.0f, 1.0f,
-        1.0f, 0.0f,
-      };
+  public static final float[] QUAD_TEXCOORDS = new float[]{
+          0.0f, 1.0f,
+          0.0f, 0.0f,
+          1.0f, 1.0f,
+          1.0f, 0.0f,
+  };
 }
