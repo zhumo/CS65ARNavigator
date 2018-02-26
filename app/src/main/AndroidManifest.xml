@@ -29,7 +29,8 @@
 
         <activity
             android:name=".MapsActivity"
-            android:label="@string/title_activity_maps"/>
+            android:label="@string/title_activity_maps"
+            android:screenOrientation="portrait"/>
         <activity
             android:name=".PermissionsActivity"
             android:label="@string/title_activity_permissions">
