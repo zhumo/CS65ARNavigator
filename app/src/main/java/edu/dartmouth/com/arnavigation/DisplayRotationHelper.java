@@ -30,8 +30,8 @@ import com.google.ar.core.Session;
  */
 public class DisplayRotationHelper implements DisplayListener {
   private boolean viewportChanged;
-  private int viewportWidth;
-  private int viewportHeight;
+  private float viewportWidth;
+  private float viewportHeight;
   private final Context context;
   private final Display display;
 
@@ -64,7 +64,7 @@ public class DisplayRotationHelper implements DisplayListener {
    * @param width the updated width of the surface.
    * @param height the updated height of the surface.
    */
-  public void onSurfaceChanged(int width, int height) {
+  public void onSurfaceChanged(float width, float height) {
     viewportWidth = width;
     viewportHeight = height;
     viewportChanged = true;
@@ -80,8 +80,8 @@ public class DisplayRotationHelper implements DisplayListener {
    */
   public void updateSessionIfNeeded(Session session) {
     if (viewportChanged) {
-      int displayRotation = display.getRotation();
-      session.setDisplayGeometry(displayRotation, viewportWidth, viewportHeight);
+
+      session.setDisplayGeometry(viewportWidth, viewportHeight);
       viewportChanged = false;
     }
   }
