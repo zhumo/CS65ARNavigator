@@ -16,28 +16,13 @@
 
 package edu.dartmouth.com.arnavigation;
 
-import com.google.ar.core.Config;
-import com.google.ar.core.Frame;
-import com.google.ar.core.Frame.TrackingState;
-import com.google.ar.core.HitResult;
-import com.google.ar.core.Plane;
-import com.google.ar.core.PlaneHitResult;
-import com.google.ar.core.Session;
-import com.google.tango.loader.ObjectWrapper;
-
-import edu.dartmouth.com.arnavigation.rendering.BackgroundRenderer;
-import edu.dartmouth.com.arnavigation.rendering.ObjectRenderer;
-import edu.dartmouth.com.arnavigation.rendering.ObjectRenderer.BlendMode;
-import edu.dartmouth.com.arnavigation.rendering.PlaneAttachment;
-import edu.dartmouth.com.arnavigation.rendering.PlaneRenderer;
-import edu.dartmouth.com.arnavigation.rendering.PointCloudRenderer;
-
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
@@ -45,17 +30,30 @@ import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.WindowManager;
-import android.widget.Toast;
 
+import com.google.ar.core.Anchor;
+import com.google.ar.core.Camera;
+import com.google.ar.core.Config;
+import com.google.ar.core.Frame;
+import com.google.ar.core.HitResult;
+import com.google.ar.core.Plane;
+import com.google.ar.core.PointCloud;
+import com.google.ar.core.Session;
+import com.google.ar.core.Trackable;
+import com.google.ar.core.Trackable.TrackingState;
+import edu.dartmouth.com.arnavigation.rendering.BackgroundRenderer;
+import edu.dartmouth.com.arnavigation.rendering.ObjectRenderer;
+import edu.dartmouth.com.arnavigation.rendering.ObjectRenderer.BlendMode;
+import edu.dartmouth.com.arnavigation.rendering.PlaneRenderer;
+import edu.dartmouth.com.arnavigation.rendering.PointCloudRenderer;
+import com.google.ar.core.exceptions.UnavailableApkTooOldException;
+import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
+import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ArrayBlockingQueue;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-
-import edu.dartmouth.com.arnavigation.R;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
@@ -70,39 +68,30 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     // Rendering. The Renderers are created here, and initialized when the GL surface is created.
     private GLSurfaceView mSurfaceView;
 
-    private Config mDefaultConfig;
     private Session mSession;
-    private BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
     private GestureDetector mGestureDetector;
-    private Snackbar mLoadingMessageSnackbar = null;
+    private Snackbar mMessageSnackbar;
+    private DisplayRotationHelper mDisplayRotationHelper;
 
-    private ObjectRenderer mVirtualObject = new ObjectRenderer();
-    private ObjectRenderer mVirtualObjectShadow = new ObjectRenderer();
-    private PlaneRenderer mPlaneRenderer = new PlaneRenderer();
-    private PointCloudRenderer mPointCloud = new PointCloudRenderer();
+    private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
+    private final ObjectRenderer mVirtualObject = new ObjectRenderer();
+    private final ObjectRenderer mVirtualObjectShadow = new ObjectRenderer();
+    private final PlaneRenderer mPlaneRenderer = new PlaneRenderer();
+    private final PointCloudRenderer mPointCloud = new PointCloudRenderer();
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private final float[] mAnchorMatrix = new float[16];
 
     // Tap handling and UI.
-    private ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
-    private ArrayList<PlaneAttachment> mTouches = new ArrayList<>();
+    private final ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
+    private final ArrayList<Anchor> mAnchors = new ArrayList<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_camera);
         mSurfaceView = (GLSurfaceView) findViewById(R.id.surfaceview);
-
-        mSession = new Session(/*context=*/this);
-
-        // Create default config, check is supported, create session from that config.
-        mDefaultConfig = Config.createDefaultConfig();
-        if (!mSession.isSupported(mDefaultConfig)) {
-            Toast.makeText(this, "This device does not support AR", Toast.LENGTH_LONG).show();
-            finish();
-            return;
-        }
+        mDisplayRotationHelper = new DisplayRotationHelper(/*context=*/ this);
 
         // Set up tap listener.
         mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
@@ -131,6 +120,37 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0); // Alpha used for plane blending.
         mSurfaceView.setRenderer(this);
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
+        Exception exception = null;
+        String message = null;
+        try {
+            mSession = new Session(/* context= */ this);
+        } catch (UnavailableArcoreNotInstalledException e) {
+            message = "Please install ARCore";
+            exception = e;
+        } catch (UnavailableApkTooOldException e) {
+            message = "Please update ARCore";
+            exception = e;
+        } catch (UnavailableSdkTooOldException e) {
+            message = "Please update this app";
+            exception = e;
+        } catch (Exception e) {
+            message = "This device does not support AR";
+            exception = e;
+        }
+
+        if (message != null) {
+            showSnackbarMessage(message, true);
+            Log.e(TAG, "Exception creating session", exception);
+            return;
+        }
+
+        // Create default config and check if supported.
+        Config config = new Config(mSession);
+        if (!mSession.isSupported(config)) {
+            showSnackbarMessage("This device does not support AR", true);
+        }
+        mSession.configure(config);
     }
 
     @Override
@@ -140,18 +160,21 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         // ARCore requires camera permissions to operate. If we did not yet obtain runtime
         // permission on Android M and above, now is a good time to ask the user for it.
         PermissionManager.ensurePermission(
-                Manifest.permission.CAMERA,
-                this,
-                CAMERA_PERMISSION_REQUEST_CODE,
-                new PermissionManager.OnHasPermission() {
-                    @Override
-                    public void onHasPermission() {
+            Manifest.permission.CAMERA,
+            this,
+            CAMERA_PERMISSION_REQUEST_CODE,
+            new PermissionManager.OnHasPermission() {
+                @Override
+                public void onHasPermission() {
+                    if (mSession != null) {
                         showLoadingMessage();
                         // Note that order matters - see the note in onPause(), the reverse applies here.
-                        mSession.resume(mDefaultConfig);
-                        mSurfaceView.onResume();
+                        mSession.resume();
                     }
+                    mSurfaceView.onResume();
+                    mDisplayRotationHelper.onResume();
                 }
+            }
         );
     }
 
@@ -161,8 +184,11 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         // Note that the order matters - GLSurfaceView is paused first so that it does not try
         // to query the session. If Session is paused before GLSurfaceView, GLSurfaceView may
         // still call mSession.update() and get a SessionPausedException.
+        mDisplayRotationHelper.onPause();
         mSurfaceView.onPause();
-        mSession.pause();
+        if (mSession != null) {
+            mSession.pause();
+        }
     }
 
     @Override
@@ -191,8 +217,10 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
         // Create the texture and pass it to ARCore session to be filled during update().
-        mBackgroundRenderer.createOnGlThread(/*context=*/this);
-        mSession.setCameraTextureName(mBackgroundRenderer.getTextureId());
+        mBackgroundRenderer.createOnGlThread(/*context=*/ this);
+        if (mSession != null) {
+            mSession.setCameraTextureName(mBackgroundRenderer.getTextureId());
+        }
 
         // Prepare the other rendering objects.
         try {
@@ -216,10 +244,8 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
+        mDisplayRotationHelper.onSurfaceChanged(width, height);
         GLES20.glViewport(0, 0, width, height);
-        // Notify ARCore session that the view size changed so that the perspective matrix and
-        // the video background can be properly adjusted.
-        mSession.setDisplayGeometry(width, height);
     }
 
     @Override
@@ -227,31 +253,39 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         // Clear screen to notify driver it should not load any pixels from previous frame.
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
+        if (mSession == null) {
+            return;
+        }
+        // Notify ARCore session that the view size changed so that the perspective matrix and
+        // the video background can be properly adjusted.
+        mDisplayRotationHelper.updateSessionIfNeeded(mSession);
+
         try {
             // Obtain the current frame from ARSession. When the configuration is set to
             // UpdateMode.BLOCKING (it is by default), this will throttle the rendering to the
             // camera framerate.
             Frame frame = mSession.update();
+            Camera camera = frame.getCamera();
 
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
-            if (tap != null && frame.getTrackingState() == TrackingState.TRACKING) {
+            if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 for (HitResult hit : frame.hitTest(tap)) {
-                    // Check if any plane was hit, and if it was hit inside the plane polygon.
-                    if (hit instanceof PlaneHitResult && ((PlaneHitResult) hit).isHitInPolygon()) {
+                    // Check if any plane was hit, and if it was hit inside the plane polygon
+                    Trackable trackable = hit.getTrackable();
+                    if (trackable instanceof Plane
+                            && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
                         // Cap the number of objects created. This avoids overloading both the
                         // rendering system and ARCore.
-                        if (mTouches.size() >= 16) {
-                            mSession.removeAnchors(Arrays.asList(mTouches.get(0).getAnchor()));
-                            mTouches.remove(0);
+                        if (mAnchors.size() >= 20) {
+                            mAnchors.get(0).detach();
+                            mAnchors.remove(0);
                         }
                         // Adding an Anchor tells ARCore that it should track this position in
-                        // space. This anchor will be used in PlaneAttachment to place the 3d model
+                        // space. This anchor is created on the Plane to place the 3d model
                         // in the correct position relative both to the world and to the plane.
-                        mTouches.add(new PlaneAttachment(
-                                ((PlaneHitResult) hit).getPlane(),
-                                mSession.addAnchor(hit.getHitPose())));
+                        mAnchors.add(hit.createAnchor());
 
                         // Hits are sorted by depth. Consider only closest hit on a plane.
                         break;
@@ -263,30 +297,35 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
             mBackgroundRenderer.draw(frame);
 
             // If not tracking, don't draw 3d objects.
-            if (frame.getTrackingState() == TrackingState.NOT_TRACKING) {
+            if (camera.getTrackingState() == TrackingState.PAUSED) {
                 return;
             }
 
             // Get projection matrix.
             float[] projmtx = new float[16];
-            mSession.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+            camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
 
             // Get camera matrix and draw.
             float[] viewmtx = new float[16];
-            frame.getViewMatrix(viewmtx, 0);
+            camera.getViewMatrix(viewmtx, 0);
 
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
 
             // Visualize tracked points.
-            mPointCloud.update(frame.getPointCloud());
-            mPointCloud.draw(frame.getPointCloudPose(), viewmtx, projmtx);
+            PointCloud pointCloud = frame.acquirePointCloud();
+            mPointCloud.update(pointCloud);
+            mPointCloud.draw(viewmtx, projmtx);
+
+            // Application is responsible for releasing the point cloud resources after
+            // using it.
+            pointCloud.release();
 
             // Check if we detected at least one plane. If so, hide the loading message.
-            if (mLoadingMessageSnackbar != null) {
-                for (Plane plane : mSession.getAllPlanes()) {
-                    if (plane.getType() == com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING &&
-                            plane.getTrackingState() == Plane.TrackingState.TRACKING) {
+            if (mMessageSnackbar != null) {
+                for (Plane plane : mSession.getAllTrackables(Plane.class)) {
+                    if (plane.getType() == com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING
+                            && plane.getTrackingState() == TrackingState.TRACKING) {
                         hideLoadingMessage();
                         break;
                     }
@@ -294,18 +333,18 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
             }
 
             // Visualize planes.
-            mPlaneRenderer.drawPlanes(mSession.getAllPlanes(), frame.getPose(), projmtx);
+            mPlaneRenderer.drawPlanes(
+                    mSession.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
 
             // Visualize anchors created by touch.
             float scaleFactor = 1.0f;
-            for (PlaneAttachment planeAttachment : mTouches) {
-                if (!planeAttachment.isTracking()) {
+            for (Anchor anchor : mAnchors) {
+                if (anchor.getTrackingState() != TrackingState.TRACKING) {
                     continue;
                 }
-                // Get the current combined pose of an Anchor and Plane in world space. The Anchor
-                // and Plane poses are updated during calls to session.update() as ARCore refines
-                // its estimate of the world.
-                planeAttachment.getPose().toMatrix(mAnchorMatrix, 0);
+                // Get the current pose of an Anchor in world space. The Anchor pose is updated
+                // during calls to session.update() as ARCore refines its estimate of the world.
+                anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
                 // Update and draw the model and its shadow.
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
@@ -320,15 +359,37 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         }
     }
 
+    private void showSnackbarMessage(String message, boolean finishOnDismiss) {
+        mMessageSnackbar = Snackbar.make(
+                CameraActivity.this.findViewById(android.R.id.content),
+                message, Snackbar.LENGTH_INDEFINITE);
+        mMessageSnackbar.getView().setBackgroundColor(0xbf323232);
+        if (finishOnDismiss) {
+            mMessageSnackbar.setAction(
+                    "Dismiss",
+                    new View.OnClickListener() {
+                        @Override
+                        public void onClick(View v) {
+                            mMessageSnackbar.dismiss();
+                        }
+                    });
+            mMessageSnackbar.addCallback(
+                    new BaseTransientBottomBar.BaseCallback<Snackbar>() {
+                        @Override
+                        public void onDismissed(Snackbar transientBottomBar, int event) {
+                            super.onDismissed(transientBottomBar, event);
+                            finish();
+                        }
+                    });
+        }
+        mMessageSnackbar.show();
+    }
+
     private void showLoadingMessage() {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mLoadingMessageSnackbar = Snackbar.make(
-                        CameraActivity.this.findViewById(android.R.id.content),
-                        "Searching for surfaces...", Snackbar.LENGTH_INDEFINITE);
-                mLoadingMessageSnackbar.getView().setBackgroundColor(0xbf323232);
-                mLoadingMessageSnackbar.show();
+                showSnackbarMessage("Searching for surfaces...", false);
             }
         });
     }
@@ -337,8 +398,10 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                mLoadingMessageSnackbar.dismiss();
-                mLoadingMessageSnackbar = null;
+                if (mMessageSnackbar != null) {
+                    mMessageSnackbar.dismiss();
+                }
+                mMessageSnackbar = null;
             }
         });
     }
