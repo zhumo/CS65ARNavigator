@@ -92,7 +92,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         WIDTH_PIXELS = displayMetrics.widthPixels;
 
         //get destination input
-        mLocationSearchText = findViewById(R.id.locationSearchText);
+        mLocationSearchText = (EditText) findViewById(R.id.locationSearchText);
 
         //get and set travel spinner
         travelSpinner = (Spinner) findViewById(R.id.travelSpinner);
