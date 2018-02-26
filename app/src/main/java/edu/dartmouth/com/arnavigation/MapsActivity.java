@@ -2,7 +2,9 @@ package edu.dartmouth.com.arnavigation;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -11,8 +13,10 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
+import android.support.v7.app.AlertDialog;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -58,6 +62,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private GoogleMap mMap;
     private LocationManager locationManager;
 
+
+    private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
+
     private LatLng mUserLocation;
     private Marker mFirstLocationMarker;
 
@@ -73,7 +80,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
 
     private float WIDTH_PIXELS;
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,55 +101,50 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         travelSpinner.setAdapter(travelAdapter);
 
 
-        if(hasLocationPermission()) {
-            locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-            MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
-            mapFragment.getMapAsync(this);
-
-        } else {
-            launchPermissionsActivity();
-        }
-
-
-
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if(!hasLocationPermission()) { launchPermissionsActivity(); }
+        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
-        if (hasLocationPermission()) {
-            // Ignore this error because onCreate ensures location permission exists.
-            mMap.setMyLocationEnabled(true);
+        PermissionManager.ensurePermission(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                this,
+                LOCATION_PERMISSION_REQUEST_CODE,
+                new PermissionManager.OnHasPermission() {
+                    @Override
+                    public void onHasPermission() { setupMap();}
+                }
+        );
+    }
 
-            Criteria locationProviderCriteria = new Criteria();
-            locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-            String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
-            // Ignore this error because onCreate ensures location permission exists.
-            Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+    private void setupMap() {
+        // Ignore this error because onCreate ensures location permission exists.
+        mMap.setMyLocationEnabled(true);
 
-            // Move the camera to last known location
-            LatLng lastKnownLatLng = new LatLng(
-                    lastKnownLocation.getLatitude(),
-                    lastKnownLocation.getLongitude()
-            );
+        Criteria locationProviderCriteria = new Criteria();
+        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+        String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
+        // Ignore this error because onCreate ensures location permission exists.
+        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
 
-            //set userLocation to first instance
-            mUserLocation = lastKnownLatLng;
+        // Move the camera to last known location
+        LatLng lastKnownLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
 
-            //set the map markers
-            setMarkers(null);
+        //set userLocation to first instance
+        mUserLocation = lastKnownLatLng;
 
-            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
-        }
+        //set the map markers
+        setMarkers(null);
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition){
@@ -232,20 +233,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         zoom -= 2; //zoom out to include everything
 
         return zoom;
-
     }
 
-    private void launchPermissionsActivity() {
-        Intent permissionsActivityIntent = new Intent(this, PermissionsActivity.class);
-        permissionsActivityIntent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        startActivity(permissionsActivityIntent);
+    public void activateCamera(View view) {
+        Intent cameraActivityIntent = new Intent(this, CameraActivity.class);
+        startActivity(cameraActivityIntent);
     }
 
-
-    private boolean hasLocationPermission() {
-        if(Build.VERSION.SDK_INT < 23) { return true; }
-
-        return checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if(resultCode == Activity.RESULT_OK) { setupMap(); }
+            else { finish(); }
+        }
     }
 
     public void locationSearchPressed(View v) {
@@ -257,7 +258,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         else {
-
             //close search text if still open
             InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
             imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
@@ -292,8 +292,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         return null;
     }
-
-
 
     private String requestDirectionsWithURL(String reqURL){
 
@@ -344,8 +342,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //async task to get direction
     private class RequestDirectionsTask extends AsyncTask<String, Void, String> {
-
-
         @Override
         protected String doInBackground(String... strings) {
 
@@ -371,8 +367,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     //async task to parse JSON response from request
     private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
-
-
         @Override
         protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
 
@@ -390,7 +384,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             return routes;
-
         }
 
         @Override
@@ -430,7 +423,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
                     Double.parseDouble(lastPointHashMap.get("lon")));
 
-
             //handle polyline
             if (polylineOptions != null){
                 mMap.clear();
@@ -441,7 +433,4 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
         }
     }
-
-
-
 }
