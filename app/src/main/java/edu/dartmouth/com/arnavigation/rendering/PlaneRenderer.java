@@ -26,7 +26,6 @@ import com.google.ar.core.Camera;
 import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
 import com.google.ar.core.TrackingState;
-import com.google.ar.core.examples.java.helloar.R;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,6 +42,8 @@ import java.util.Map;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
+
+import edu.dartmouth.com.arnavigation.R;
 
 /** Renders the detected AR planes. */
 public class PlaneRenderer {
