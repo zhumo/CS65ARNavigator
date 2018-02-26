@@ -21,7 +21,7 @@ import android.opengl.GLSurfaceView;
 
 import com.google.ar.core.Frame;
 import com.google.ar.core.Session;
-import com.google.ar.core.examples.java.helloar.R;
+import edu.dartmouth.com.arnavigation.R;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;

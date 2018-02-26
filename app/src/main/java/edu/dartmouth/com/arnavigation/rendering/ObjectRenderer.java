@@ -21,8 +21,6 @@ import android.opengl.GLES20;
 import android.opengl.GLUtils;
 import android.opengl.Matrix;
 
-import com.google.ar.core.examples.java.helloar.R;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
@@ -35,6 +33,7 @@ import de.javagl.obj.Obj;
 import de.javagl.obj.ObjData;
 import de.javagl.obj.ObjReader;
 import de.javagl.obj.ObjUtils;
+import edu.dartmouth.com.arnavigation.R;
 
 /** Renders an object loaded from an OBJ file in OpenGL. */
 public class ObjectRenderer {
