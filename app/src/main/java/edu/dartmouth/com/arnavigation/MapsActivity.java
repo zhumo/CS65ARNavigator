@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -228,19 +229,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             return;
         }
 
-        else {
-            //close search text if still open
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+        //close search text if still open
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
-            //if address, get geocode
-            //assume address for now
-            String url = getRequestURLAddress(mLocationSearchText.getText().toString());
+        //if address, get geocode
+        //assume address for now
+        String url = getRequestURLAddress(mLocationSearchText.getText().toString());
 
+        Button searchButton = findViewById(R.id.searchButton);
+        searchButton.setEnabled(false);
 
-            //start async task
-            new RequestDirectionsTask().execute(url);
-        }
+        //start async task
+        new RequestDirectionsTask().execute(url);
     }
 
     public void resetMapButtonClicked(View v) {
@@ -262,7 +263,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private String getRequestURLAddress(String address){
-
         //create URL request string using address
 
         String origin = "origin=" + mUserLocation.latitude + "," + mUserLocation.longitude;
@@ -377,7 +377,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> paths){
-
             //draw paths
             ArrayList waypoints = null;
 
@@ -417,6 +416,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.clear();
                 setMarkers(lastLatLng);
                 mMap.addPolyline(polylineOptions);
+
+                Button searchButton = findViewById(R.id.searchButton);
+                searchButton.setEnabled(true);
             } else {
                 Toast.makeText(getApplicationContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
             }
