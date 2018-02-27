@@ -22,6 +22,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
@@ -66,10 +67,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
 
     private LatLng mUserLocation;
-    private Marker mFirstLocationMarker;
 
     private EditText mLocationSearchText;
     private Spinner travelSpinner;
+
+    private Criteria locationProviderCriteria;
+    private String bestLocationProvider;
 
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
     private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
@@ -105,6 +108,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        locationProviderCriteria = new Criteria();
+        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bestLocationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
     }
 
     @Override
@@ -126,11 +138,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Ignore this error because onCreate ensures location permission exists.
         mMap.setMyLocationEnabled(true);
 
-        Criteria locationProviderCriteria = new Criteria();
-        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-        String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
         // Ignore this error because onCreate ensures location permission exists.
-        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
 
         // Move the camera to last known location
         LatLng lastKnownLatLng = new LatLng(
@@ -141,61 +150,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //set userLocation to first instance
         mUserLocation = lastKnownLatLng;
 
-        //set the map markers
-        setMarkers(null);
-
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition){
-
-        if (mFirstLocationMarker == null) {
-            //add first marker
-            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-        }
-
-        else if (endPosition != null){
-
-            //set marker for both start and end locations
-
-            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-            Marker endLocationMarker = mMap.addMarker(new MarkerOptions().position(endPosition).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-        }
+        mMap.addMarker(new MarkerOptions().position(endPosition).icon(
+            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        );
 
         setZoom(endPosition);
     }
 
     private void setZoom(LatLng position) {
-
-        if (position == null){
-            return;
-        }
-
-        else {
-            boolean needAdjustment = false;
-
-            VisibleRegion vr = mMap.getProjection().getVisibleRegion();
-
-            if (!vr.latLngBounds.contains(position)){
-                needAdjustment = true;
-            }
-
-            if (needAdjustment) {
-
-                setNewBounds(position);
-                //CameraUpdate update = CameraUpdateFactory.newLatLngZoom(midLatLng, mMap.get);
-                //mMap.animateCamera(update);
-            }
-
+        VisibleRegion vr = mMap.getProjection().getVisibleRegion();
+        if (!vr.latLngBounds.contains(position)) {
+            setNewBounds(position);
         }
     }
 
     private void setNewBounds(LatLng finalPosition){
-
         double minLat = Double.min(mUserLocation.latitude, finalPosition.latitude);
         double maxLat = Double.max(mUserLocation.latitude, finalPosition.latitude);
         double minLng = Double.min(mUserLocation.longitude, finalPosition.longitude);
@@ -213,7 +186,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.animateCamera(update);
     }
 
-    private int calculateZoomFactor  (LatLngBounds bounds) {
+    private int calculateZoomFactor(LatLngBounds bounds) {
 
         //calculate zoom using mercator line
 
@@ -250,30 +223,46 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void locationSearchPressed(View v) {
-
         //check if empty string
         if (mLocationSearchText.getText().toString() == null) {
             Toast.makeText(getApplicationContext(), "Please enter a destination", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        else {
-            //close search text if still open
-            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+        //close search text if still open
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
-            //if address, get geocode
-            //assume address for now
-            String url = getRequestURLAddress(mLocationSearchText.getText().toString());
+        //if address, get geocode
+        //assume address for now
+        String url = getRequestURLAddress(mLocationSearchText.getText().toString());
 
+        Button searchButton = findViewById(R.id.searchButton);
+        searchButton.setEnabled(false);
 
-            //start async task
-            new RequestDirectionsTask().execute(url);
-        }
+        //start async task
+        new RequestDirectionsTask().execute(url);
+    }
+
+    public void resetMapButtonClicked(View v) {
+        mMap.clear();
+        EditText destinationInput = (EditText) findViewById(R.id.locationSearchText);
+        destinationInput.setText("");
+        travelSpinner.setSelection(0);
+
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
+        LatLng lastKnownLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
+        mUserLocation = lastKnownLatLng;
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private String getRequestURLAddress(String address){
-
         //create URL request string using address
 
         String origin = "origin=" + mUserLocation.latitude + "," + mUserLocation.longitude;
@@ -388,7 +377,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         @Override
         protected void onPostExecute(List<List<HashMap<String, String>>> paths){
-
             //draw paths
             ArrayList waypoints = null;
 
@@ -428,6 +416,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.clear();
                 setMarkers(lastLatLng);
                 mMap.addPolyline(polylineOptions);
+
+                Button searchButton = findViewById(R.id.searchButton);
+                searchButton.setEnabled(true);
             } else {
                 Toast.makeText(getApplicationContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
             }
