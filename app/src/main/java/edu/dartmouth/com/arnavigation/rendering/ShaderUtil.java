@@ -17,13 +17,14 @@ package edu.dartmouth.com.arnavigation.rendering;
 import android.content.Context;
 import android.opengl.GLES20;
 import android.util.Log;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
-/** Shader helper functions. */
+/**
+ * Shader helper functions.
+ */
 public class ShaderUtil {
   /**
    * Converts a raw text file, saved as a resource, into an OpenGL ES shader.
