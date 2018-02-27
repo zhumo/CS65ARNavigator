@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/ARNavigation.iml" filepath="$PROJECT_DIR$/ARNavigation.iml" />
-      <module fileurl="file://$PROJECT_DIR$/CS65ARNavigator.iml" filepath="$PROJECT_DIR$/CS65ARNavigator.iml" />
       <module fileurl="file://$PROJECT_DIR$/CS65ARNavigator-master.iml" filepath="$PROJECT_DIR$/CS65ARNavigator-master.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
     </modules>
