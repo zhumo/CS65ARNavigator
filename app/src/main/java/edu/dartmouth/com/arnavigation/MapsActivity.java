@@ -150,7 +150,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //set userLocation to first instance
         mUserLocation = lastKnownLatLng;
 
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition){
