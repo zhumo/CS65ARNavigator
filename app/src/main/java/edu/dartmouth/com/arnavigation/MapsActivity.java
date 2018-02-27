@@ -71,6 +71,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private EditText mLocationSearchText;
     private Spinner travelSpinner;
 
+    private Criteria locationProviderCriteria;
+    private String bestLocationProvider;
+
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
     private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
@@ -105,6 +108,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+
+        locationProviderCriteria = new Criteria();
+        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        bestLocationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
     }
 
     @Override
@@ -126,11 +138,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         // Ignore this error because onCreate ensures location permission exists.
         mMap.setMyLocationEnabled(true);
 
-        Criteria locationProviderCriteria = new Criteria();
-        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-        String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
         // Ignore this error because onCreate ensures location permission exists.
-        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
 
         // Move the camera to last known location
         LatLng lastKnownLatLng = new LatLng(
@@ -185,10 +194,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
             if (needAdjustment) {
-
                 setNewBounds(position);
-                //CameraUpdate update = CameraUpdateFactory.newLatLngZoom(midLatLng, mMap.get);
-                //mMap.animateCamera(update);
             }
 
         }
@@ -213,7 +219,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap.animateCamera(update);
     }
 
-    private int calculateZoomFactor  (LatLngBounds bounds) {
+    private int calculateZoomFactor(LatLngBounds bounds) {
 
         //calculate zoom using mercator line
 
@@ -250,7 +256,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void locationSearchPressed(View v) {
-
         //check if empty string
         if (mLocationSearchText.getText().toString() == null) {
             Toast.makeText(getApplicationContext(), "Please enter a destination", Toast.LENGTH_SHORT).show();
@@ -270,6 +275,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             //start async task
             new RequestDirectionsTask().execute(url);
         }
+    }
+
+    public void resetMapButtonClicked(View v) {
+        mMap.clear();
+        EditText destinationInput = (EditText) findViewById(R.id.locationSearchText);
+        destinationInput.setText("");
+        travelSpinner.setSelection(0);
+
+        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
+        LatLng lastKnownLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
+        mUserLocation = lastKnownLatLng;
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private String getRequestURLAddress(String address){

@@ -5,8 +5,10 @@
     tools:context="edu.dartmouth.com.arnavigation.MapsActivity">
 
     <LinearLayout
+        android:id="@+id/toolbar"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:layout_alignParentTop="true"
         android:orientation="vertical">
 
         <LinearLayout
@@ -21,7 +23,7 @@
                 android:layout_weight="9">
                 <EditText
                     android:id="@+id/locationSearchText"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:cursorVisible="false"
                     android:hint="Destination"
@@ -41,13 +43,26 @@
                 android:text="Go" />
         </LinearLayout>
 
-        <fragment
-            android:id="@+id/map"
-            android:name="com.google.android.gms.maps.MapFragment"
+        <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            />
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
+            <Button
+                android:id="@+id/reset_map_button"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentStart="true"
+                android:onClick="resetMapButtonClicked"
+                android:text="reset"/>
+
+            <fragment
+                android:id="@+id/map"
+                android:name="com.google.android.gms.maps.MapFragment"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                />
+        </RelativeLayout>
     </LinearLayout>
 
     <android.support.design.widget.FloatingActionButton
