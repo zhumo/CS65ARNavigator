@@ -9,59 +9,104 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.support.annotation.NonNull;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v7.app.AlertDialog;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
-import android.widget.TextView;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.ArrayAdapter;
+import android.widget.EditText;
+import android.widget.Spinner;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.PolylineOptions;
+import com.google.android.gms.maps.model.VisibleRegion;
+
+import com.google.maps.android.SphericalUtil;
+import com.google.maps.android.geometry.Bounds;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
     private LocationManager locationManager;
+    private String locationProvider;
+    private DirectionsManager directionsManager;
 
-    private RaiseGestureReceiver raiseGestureReceiver = new RaiseGestureReceiver();
+    private BroadcastReceiver updateReceiver;
 
     private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
+
+    private LatLng mUserLocation;
+    private Marker mFirstLocationMarker;
+
+    private EditText mLocationSearchText;
+    private Spinner travelSpinner;
+
+    private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
+
+
+    private float WIDTH_PIXELS;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
 
+        //get width of screen
+        DisplayMetrics displayMetrics = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
+        WIDTH_PIXELS = displayMetrics.widthPixels;
+
+        //get destination input
+        mLocationSearchText = (EditText) findViewById(R.id.locationSearchText);
+
+        //get and set travel spinner
+        travelSpinner = (Spinner) findViewById(R.id.travelSpinner);
+        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
+        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
+        travelSpinner.setAdapter(travelAdapter);
+
+        directionsManager = new DirectionsManager(this);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
+
+        setUpdateReceiver();
+
+        MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        Intent raiseGestureServiceIntent = new Intent(this, RaiseGestureService.class);
-        startService(raiseGestureServiceIntent);
-
-        registerReceiver(raiseGestureReceiver, new IntentFilter(RaiseGestureService.PHONE_RAISED_ACTION));
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        Intent raiseGestureServiceIntent = new Intent(this, RaiseGestureService.class);
-        stopService(raiseGestureServiceIntent);
-
-        unregisterReceiver(raiseGestureReceiver);
     }
 
     @Override
@@ -79,14 +124,34 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         );
     }
 
+    @Override
+    protected void onDestroy(){
+        //unregister receiver
+        unregisterReceiver(updateReceiver);
+
+        super.onDestroy();
+    }
+
     private void setupMap() {
         // Ignore this error because onCreate ensures location permission exists.
         mMap.setMyLocationEnabled(true);
 
         Criteria locationProviderCriteria = new Criteria();
         locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-        String locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
+        locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
         // Ignore this error because onCreate ensures location permission exists.
+
+
+        //set userLocation to first instance
+        mUserLocation = getUserLocation();
+
+        //set the map markers
+        setMarkers(null);
+
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
+    }
+
+    private LatLng getUserLocation(){
         Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
 
         // Move the camera to last known location
@@ -94,7 +159,130 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 lastKnownLocation.getLatitude(),
                 lastKnownLocation.getLongitude()
         );
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
+
+        return lastKnownLatLng;
+    }
+
+    private void setUpdateReceiver(){
+
+        IntentFilter intentFilter = new IntentFilter();
+
+        intentFilter.addAction("directions.update");
+        //intentFilter.addAction("location.update");
+
+        updateReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+                if (intent.getAction() == "directions.update"){
+                    //update directions
+                    PolylineOptions polylineOptions = directionsManager.getPolylineOptions();
+                    LatLng lastLatLng = directionsManager.getLastLocation();
+
+                    //handle polyline
+                    if (polylineOptions != null){
+                        mMap.clear();
+                        setMarkers(lastLatLng);
+                        mMap.addPolyline(polylineOptions);
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+//                if (intent.getAction() == "location.update"){
+//                    //update user location
+//                }
+            }
+        };
+
+        registerReceiver(updateReceiver, intentFilter);
+    }
+
+    private void setMarkers(LatLng endPosition){
+
+        if (mFirstLocationMarker == null) {
+            //add first marker
+            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
+                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+        }
+
+        else if (endPosition != null){
+
+            //set marker for both start and end locations
+
+            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
+                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
+
+            Marker endLocationMarker = mMap.addMarker(new MarkerOptions().position(endPosition).icon(
+                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
+        }
+
+        setZoom(endPosition);
+    }
+
+    private void setZoom(LatLng position) {
+
+        if (position == null){
+            return;
+        }
+
+        else {
+            boolean needAdjustment = false;
+
+            VisibleRegion vr = mMap.getProjection().getVisibleRegion();
+
+            if (!vr.latLngBounds.contains(position)){
+                needAdjustment = true;
+            }
+
+            if (needAdjustment) {
+
+                setNewBounds(position);
+                //CameraUpdate update = CameraUpdateFactory.newLatLngZoom(midLatLng, mMap.get);
+                //mMap.animateCamera(update);
+            }
+
+        }
+    }
+
+    private void setNewBounds(LatLng finalPosition){
+
+        double minLat = Double.min(mUserLocation.latitude, finalPosition.latitude);
+        double maxLat = Double.max(mUserLocation.latitude, finalPosition.latitude);
+        double minLng = Double.min(mUserLocation.longitude, finalPosition.longitude);
+        double maxLng = Double.max(mUserLocation.longitude, finalPosition.longitude);
+
+        LatLng sw = new LatLng(minLat, minLng);
+        LatLng ne = new LatLng(maxLat, maxLng);
+
+        LatLngBounds latLngBounds = new LatLngBounds(sw, ne);
+        mMap.setLatLngBoundsForCameraTarget(latLngBounds);
+
+        int zoomFactor = calculateZoomFactor(latLngBounds);
+
+        CameraUpdate update = CameraUpdateFactory.newLatLngZoom(latLngBounds.getCenter(), zoomFactor);
+        mMap.animateCamera(update);
+    }
+
+    private int calculateZoomFactor  (LatLngBounds bounds) {
+
+        //calculate zoom using mercator line
+
+        int GLOBE_WIDTH = 256;
+
+        double west = bounds.southwest.longitude;
+        double east = bounds.northeast.longitude;
+
+        double angle = east - west;
+        if (angle < 0){
+            angle += 360;
+        }
+        double zoomDouble = Math.floor(Math.log(WIDTH_PIXELS * 360 / angle / GLOBE_WIDTH) / Math.log(2));
+
+        int zoom = (int)zoomDouble;
+        zoom -= 2; //zoom out to include everything
+
+        return zoom;
     }
 
     public void activateCamera(View view) {
@@ -111,13 +299,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    public class RaiseGestureReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Log.d("mztag", "received!");
-            Intent cameraActivityIntent = new Intent(MapsActivity.this, CameraActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-            startActivity(cameraActivityIntent);
+    public void locationSearchPressed(View v) {
+
+        //check if empty string
+        if (mLocationSearchText.getText().toString() == null) {
+            Toast.makeText(getApplicationContext(), "Please enter a destination", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        else {
+            //close search text if still open
+            InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+            imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+
+            //if address, get geocode
+            //assume address for now
+            String address = mLocationSearchText.getText().toString();
+
+            //update userLocation value
+            mUserLocation = getUserLocation();
+
+            //pass to DirectionsManager address function
+            directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
+
         }
     }
 }
