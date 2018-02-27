@@ -66,7 +66,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
 
     private LatLng mUserLocation;
-    private Marker mFirstLocationMarker;
 
     private EditText mLocationSearchText;
     private Spinner travelSpinner;
@@ -150,58 +149,25 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //set userLocation to first instance
         mUserLocation = lastKnownLatLng;
 
-        //set the map markers
-        setMarkers(null);
-
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition){
-
-        if (mFirstLocationMarker == null) {
-            //add first marker
-            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-        }
-
-        else if (endPosition != null){
-
-            //set marker for both start and end locations
-
-            mFirstLocationMarker = mMap.addMarker(new MarkerOptions().position(mUserLocation).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN)));
-
-            Marker endLocationMarker = mMap.addMarker(new MarkerOptions().position(endPosition).icon(
-                    BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED)));
-        }
+        mMap.addMarker(new MarkerOptions().position(endPosition).icon(
+            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+        );
 
         setZoom(endPosition);
     }
 
     private void setZoom(LatLng position) {
-
-        if (position == null){
-            return;
-        }
-
-        else {
-            boolean needAdjustment = false;
-
-            VisibleRegion vr = mMap.getProjection().getVisibleRegion();
-
-            if (!vr.latLngBounds.contains(position)){
-                needAdjustment = true;
-            }
-
-            if (needAdjustment) {
-                setNewBounds(position);
-            }
-
+        VisibleRegion vr = mMap.getProjection().getVisibleRegion();
+        if (!vr.latLngBounds.contains(position)) {
+            setNewBounds(position);
         }
     }
 
     private void setNewBounds(LatLng finalPosition){
-
         double minLat = Double.min(mUserLocation.latitude, finalPosition.latitude);
         double maxLat = Double.max(mUserLocation.latitude, finalPosition.latitude);
         double minLng = Double.min(mUserLocation.longitude, finalPosition.longitude);
