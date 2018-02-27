@@ -3,9 +3,11 @@ package edu.dartmouth.com.arnavigation;
 import android.Manifest;
 import android.app.Activity;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.location.Criteria;
@@ -62,6 +64,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private GoogleMap mMap;
     private LocationManager locationManager;
+    private DirectionsManager directionsManager;
+
+    private BroadcastReceiver updateReceiver;
 
 
     private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
@@ -74,13 +79,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private Criteria locationProviderCriteria;
     private String bestLocationProvider;
 
-    private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
-    private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
-    private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
-    private static final String OUTPUT_TYPE = "json";
-    private static final float POLYLINE_WIDTH = 15;
     private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
-    private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
 
     private float WIDTH_PIXELS;
 
@@ -104,7 +103,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         travelSpinner.setAdapter(travelAdapter);
 
 
+        directionsManager = new DirectionsManager(this);
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        setUpdateReceiver();
 
         MapFragment mapFragment = (MapFragment) getFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
@@ -113,10 +115,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
     }
 
+
     @Override
     protected void onResume() {
         super.onResume();
         bestLocationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
+    }
+
+    @Override
+    protected void onDestroy(){
+        //unregister receiver
+        unregisterReceiver(updateReceiver);
+
+        super.onDestroy();
     }
 
     @Override
@@ -129,7 +140,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 LOCATION_PERMISSION_REQUEST_CODE,
                 new PermissionManager.OnHasPermission() {
                     @Override
-                    public void onHasPermission() { setupMap();}
+                    public void onHasPermission() {
+                        setupMap();
+                    }
                 }
         );
     }
@@ -148,14 +161,59 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         );
 
         //set userLocation to first instance
-        mUserLocation = lastKnownLatLng;
+        mUserLocation = getUserLocation();
 
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
     }
 
-    private void setMarkers(LatLng endPosition){
+    private LatLng getUserLocation() {
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
+
+        // Move the camera to last known location
+        LatLng lastKnownLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
+
+        return lastKnownLatLng;
+    }
+
+    private void setUpdateReceiver() {
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("directions.update");
+        //intentFilter.addAction("location.update");
+
+        updateReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+
+                if (intent.getAction() == "directions.update") {
+                    //update directions
+                    PolylineOptions polylineOptions = directionsManager.getPolylineOptions();
+                    LatLng lastLatLng = directionsManager.getLastLocation();
+
+                    //handle polyline
+                    if (polylineOptions != null) {
+                        mMap.clear();
+                        setMarkers(lastLatLng);
+                        mMap.addPolyline(polylineOptions);
+                    } else {
+                        Toast.makeText(getApplicationContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
+                    }
+                }
+
+//                if (intent.getAction() == "location.update"){
+//                    //update user location
+//                }
+            }
+        };
+
+        registerReceiver(updateReceiver, intentFilter);
+    }
+
+    private void setMarkers(LatLng endPosition) {
         mMap.addMarker(new MarkerOptions().position(endPosition).icon(
-            BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
+                BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_RED))
         );
 
         setZoom(endPosition);
@@ -168,7 +226,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
-    private void setNewBounds(LatLng finalPosition){
+    private void setNewBounds(LatLng finalPosition) {
         double minLat = Double.min(mUserLocation.latitude, finalPosition.latitude);
         double maxLat = Double.max(mUserLocation.latitude, finalPosition.latitude);
         double minLng = Double.min(mUserLocation.longitude, finalPosition.longitude);
@@ -196,12 +254,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         double east = bounds.northeast.longitude;
 
         double angle = east - west;
-        if (angle < 0){
+        if (angle < 0) {
             angle += 360;
         }
         double zoomDouble = Math.floor(Math.log(WIDTH_PIXELS * 360 / angle / GLOBE_WIDTH) / Math.log(2));
 
-        int zoom = (int)zoomDouble;
+        int zoom = (int) zoomDouble;
 
         zoom -= 2; //zoom out to include everything
 
@@ -216,9 +274,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if(resultCode == Activity.RESULT_OK) { setupMap(); }
-            else { finish(); }
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (resultCode == Activity.RESULT_OK) {
+                setupMap();
+            } else {
+                finish();
+            }
         }
     }
 
@@ -230,18 +291,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
 
         //close search text if still open
-        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
-        //if address, get geocode
-        //assume address for now
-        String url = getRequestURLAddress(mLocationSearchText.getText().toString());
-
+        //disable search button
         Button searchButton = findViewById(R.id.searchButton);
         searchButton.setEnabled(false);
 
-        //start async task
-        new RequestDirectionsTask().execute(url);
+
+        //if address, get geocode
+        //assume address for now
+        String address = mLocationSearchText.getText().toString();
+
+        //update userLocation value
+        mUserLocation = getUserLocation();
+
+        //pass to DirectionsManager address function
+        directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
+
     }
 
     public void resetMapButtonClicked(View v) {
@@ -250,178 +317,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         destinationInput.setText("");
         travelSpinner.setSelection(0);
 
-        InputMethodManager imm = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
-        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
-        LatLng lastKnownLatLng = new LatLng(
-                lastKnownLocation.getLatitude(),
-                lastKnownLocation.getLongitude()
-        );
-        mUserLocation = lastKnownLatLng;
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(lastKnownLatLng, 17.0f));
+        mUserLocation = getUserLocation()
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
     }
 
-    private String getRequestURLAddress(String address){
-        //create URL request string using address
-
-        String origin = "origin=" + mUserLocation.latitude + "," + mUserLocation.longitude;
-        String destination = "destination=" + address;
-        String param = origin +"&" + destination +"&" + TRAVEL_MODES[travelSpinner.getSelectedItemPosition()];
-        String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
-
-        return urlRequest;
-    }
-
-    private String getRequestURLLatLng(LatLng destination){
-
-        //create URL request string using specific latlng
-
-        //not implemented yet
-
-        return null;
-    }
-
-    private String requestDirectionsWithURL(String reqURL){
-
-         //new RequestDirectionsTask().execute();
-
-        String responseString = "";
-        InputStream inputStream = null;
-        HttpsURLConnection httpsURLConnection = null;
-
-        try {
-            //get url connection
-            URL url = new URL(reqURL);
-            httpsURLConnection = (HttpsURLConnection) url.openConnection();
-            httpsURLConnection.connect();
-
-            //set up file reading streams
-            inputStream = httpsURLConnection.getInputStream();
-            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
-            StringBuffer stringBuffer = new StringBuffer();
-            String line = "";
-
-            //append to buffer
-            while ((line = bufferedReader.readLine()) != null) {
-                stringBuffer.append(line);
-            }
-
-            //get response string
-            responseString = stringBuffer.toString();
-
-            //close streams
-            inputStream.close();
-            inputStreamReader.close();
-            bufferedReader.close();
-
-        }catch (IOException e){
-            e.printStackTrace();
-        } finally {
-            //disconnect from url
-            httpsURLConnection.disconnect();
-        }
-
-        return responseString;
-    }
-
-    // ********** ASYNC TASKS *********** //
-
-    //async task to get direction
-    private class RequestDirectionsTask extends AsyncTask<String, Void, String> {
-        @Override
-        protected String doInBackground(String... strings) {
-
-            String responseString = "";
-
-            try {
-                responseString = requestDirectionsWithURL(strings[0]);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-            Log.d("RESPONSE", responseString);
-
-            return responseString;
-        }
-
-        @Override
-        protected void onPostExecute(String result){
-            //parse JSON with new async task
-            new ParseDirectionsTask().execute(result);
-        }
-    }
-
-    //async task to parse JSON response from request
-    private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
-        @Override
-        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
-
-            JSONObject jsonObject = null;
-
-            List<List<HashMap<String, String>>> routes = null;
-
-            //use DirectionsParser class to parse JSONObject
-            try {
-                jsonObject = new JSONObject(strings[0]);
-                DirectionsParser directionsParser = new DirectionsParser();
-                routes = directionsParser.parse(jsonObject);
-            } catch (JSONException je){
-                je.printStackTrace();
-            }
-
-            return routes;
-        }
-
-        @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> paths){
-            //draw paths
-            ArrayList waypoints = null;
-
-            PolylineOptions polylineOptions = null;
-
-            for (List<HashMap<String, String>> path: paths){
-                waypoints = new ArrayList();
-                polylineOptions = new PolylineOptions();
-
-                for (HashMap<String, String> point: path) {
-
-                    //get values from json-created hashmap
-                    Double lat = Double.parseDouble(point.get("lat"));
-                    Double lng = Double.parseDouble(point.get("lon"));
-
-                    //add to waypoints
-                    waypoints.add(new LatLng(lat,lng));
-                }
-
-                //create polyline
-                polylineOptions.addAll(waypoints);
-                polylineOptions.width(POLYLINE_WIDTH);
-                polylineOptions.geodesic(true);
-                polylineOptions.color(Color.BLUE);
-            }
-
-            //get last position latlng
-            int lastPathIndex = paths.size() - 1;
-            List<HashMap<String, String>> lastPath = paths.get(lastPathIndex);
-            int lastPointIndex = lastPath.size() - 1;
-            HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
-            LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
-                    Double.parseDouble(lastPointHashMap.get("lon")));
-
-            //handle polyline
-            if (polylineOptions != null){
-                mMap.clear();
-                setMarkers(lastLatLng);
-                mMap.addPolyline(polylineOptions);
-
-                Button searchButton = findViewById(R.id.searchButton);
-                searchButton.setEnabled(true);
-            } else {
-                Toast.makeText(getApplicationContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
-            }
-        }
-    }
 }
