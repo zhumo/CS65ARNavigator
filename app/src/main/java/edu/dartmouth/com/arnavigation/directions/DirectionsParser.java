@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.directions;
 
 import com.google.android.gms.maps.model.LatLng;
 

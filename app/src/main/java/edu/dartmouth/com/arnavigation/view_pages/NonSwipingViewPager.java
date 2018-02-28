@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation.views;
+package edu.dartmouth.com.arnavigation.view_pages;
 
 import android.content.Context;
 import android.support.v4.view.ViewPager;

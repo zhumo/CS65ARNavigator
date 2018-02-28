@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation.views;
+package edu.dartmouth.com.arnavigation.view_pages;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;

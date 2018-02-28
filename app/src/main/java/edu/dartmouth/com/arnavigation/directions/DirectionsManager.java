@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.directions;
 
 import android.content.Context;
 import android.content.Intent;
@@ -29,13 +29,13 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class DirectionsManager {
 
+    private String locationProvider;
+
     //for polyline
     private PolylineOptions polylineOptions;
     private static final float POLYLINE_WIDTH = 15;
 
     //for URL request
-
-
     private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
 

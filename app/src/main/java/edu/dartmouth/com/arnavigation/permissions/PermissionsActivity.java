@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.permissions;
 
 import android.Manifest;
 import android.app.Activity;

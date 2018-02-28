@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.view_pages;
 
 import android.Manifest;
 import android.content.BroadcastReceiver;
@@ -30,9 +30,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     private GoogleMap mMap;
     private LocationManager locationManager;
 
-    private String locationProvider;
-    private DirectionsManager directionsManager;
-
     private BroadcastReceiver updateReceiver;
 
     private LatLng mUserLocation;
@@ -52,12 +49,9 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         WIDTH_PIXELS = displayMetrics.widthPixels;
 
-        setUpdateReceiver();
-
         locationProviderCriteria = new Criteria();
         locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
 
-        directionsManager = new DirectionsManager(getContext());
         locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
 
         getMapAsync(this);
@@ -86,12 +80,9 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         // Ignore this error because onCreate ensures location permission exists.
         mMap.setMyLocationEnabled(true);
 
-
         Criteria locationProviderCriteria = new Criteria();
         locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
         locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
-        // Ignore this error because onCreate ensures location permission exists.
-
 
         //set userLocation to first instance
         mUserLocation = getUserLocation();
@@ -120,42 +111,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         return lastKnownLatLng;
     }
-
-    private void setUpdateReceiver(){
-
-        IntentFilter intentFilter = new IntentFilter();
-
-        intentFilter.addAction("directions.update");
-        //intentFilter.addAction("location.update");
-
-        updateReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
-                if (intent.getAction() == "directions.update"){
-                    //update directions
-                    PolylineOptions polylineOptions = directionsManager.getPolylineOptions();
-                    LatLng lastLatLng = directionsManager.getLastLocation();
-
-                    //handle polyline
-                    if (polylineOptions != null){
-                        mMap.clear();
-                        setMarkers(lastLatLng);
-                        mMap.addPolyline(polylineOptions);
-                    } else {
-                        Toast.makeText(getContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
-                    }
-                }
-
-//                if (intent.getAction() == "location.update"){
-//                    //update user location
-//                }
-            }
-        };
-
-        getActivity().registerReceiver(updateReceiver, intentFilter);
-    }
-
 
     private void setMarkers(LatLng endPosition) {
         mMap.addMarker(new MarkerOptions().position(endPosition).icon(

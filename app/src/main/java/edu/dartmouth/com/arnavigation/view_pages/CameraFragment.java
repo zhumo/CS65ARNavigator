@@ -14,11 +14,8 @@
  * limitations under the License.
  */
 
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.view_pages;
 
-import android.Manifest;
-import android.app.Activity;
-import android.content.Intent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
@@ -33,7 +30,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.WindowManager;
 
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
@@ -45,6 +41,9 @@ import com.google.ar.core.PointCloud;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
+
+import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
+import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;

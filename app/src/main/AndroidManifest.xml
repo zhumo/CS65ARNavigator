@@ -53,7 +53,7 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".PermissionsActivity"
+            android:name=".permissions.PermissionsActivity"
             android:label="@string/title_activity_permissions" />
 
         <service
