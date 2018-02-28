@@ -108,20 +108,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
             }
         });
 
-        mSurfaceView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return mGestureDetector.onTouchEvent(event);
-            }
-        });
-
-        // Set up renderer.
-        mSurfaceView.setPreserveEGLContextOnPause(true);
-        mSurfaceView.setEGLContextClientVersion(2);
-        mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0); // Alpha used for plane blending.
-        mSurfaceView.setRenderer(this);
-        mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
-
         Exception exception = null;
         String message = null;
         try {
@@ -160,6 +146,20 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         View fragmentView = inflater.inflate(R.layout.camera_fragment, container, false);
         mSurfaceView = fragmentView.findViewById(R.id.surfaceview);
 
+        mSurfaceView.setOnTouchListener(new View.OnTouchListener() {
+            @Override
+            public boolean onTouch(View v, MotionEvent event) {
+                return mGestureDetector.onTouchEvent(event);
+            }
+        });
+
+        // Set up renderer.
+        mSurfaceView.setPreserveEGLContextOnPause(true);
+        mSurfaceView.setEGLContextClientVersion(2);
+        mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0); // Alpha used for plane blending.
+        mSurfaceView.setRenderer(this);
+        mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
         return fragmentView;
     }
 
@@ -193,15 +193,15 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
         if (isVisibleToUser) {
-            // Standard Android full-screen functionality.
-            getActivity().getWindow().getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+//            // Standard Android full-screen functionality.
+//            getActivity().getWindow().getDecorView().setSystemUiVisibility(
+//                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+//                            | View.SYSTEM_UI_FLAG_FULLSCREEN
+//                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+//            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     }
 
@@ -359,7 +359,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
     private void showSnackbarMessage(String message, boolean finishOnDismiss) {
         mMessageSnackbar = Snackbar.make(
-                getView().findViewById(android.R.id.content),
+                getView(),
                 message, Snackbar.LENGTH_INDEFINITE);
         mMessageSnackbar.getView().setBackgroundColor(0xbf323232);
         if (finishOnDismiss) {

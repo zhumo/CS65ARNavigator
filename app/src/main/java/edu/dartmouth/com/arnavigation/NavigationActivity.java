@@ -72,45 +72,45 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void locationSearchPressed(View v) {
-        //check if empty string
-        if (mLocationSearchText.getText().toString() == null) {
-            Toast.makeText(this, "Please enter a destination", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        //close search text if still open
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
-
-        //disable search button
-        Button searchButton = findViewById(R.id.searchButton);
-        searchButton.setEnabled(false);
-
-
-        //if address, get geocode
-        //assume address for now
-        String address = mLocationSearchText.getText().toString();
-
-        //update userLocation value
-        mUserLocation = getUserLocation();
-
-        //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
+//        //check if empty string
+//        if (mLocationSearchText.getText().toString() == null) {
+//            Toast.makeText(this, "Please enter a destination", Toast.LENGTH_SHORT).show();
+//            return;
+//        }
+//
+//        //close search text if still open
+//        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+//
+//        //disable search button
+//        Button searchButton = findViewById(R.id.searchButton);
+//        searchButton.setEnabled(false);
+//
+//
+//        //if address, get geocode
+//        //assume address for now
+//        String address = mLocationSearchText.getText().toString();
+//
+//        //update userLocation value
+//        mUserLocation = getUserLocation();
+//
+//        //pass to DirectionsManager address function
+//        directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
     }
 
     public void resetMapButtonClicked(View v) {
-        navigationMapFragment.clear();
-        cameraFragment.clear();
-
-        EditText destinationInput = findViewById(R.id.locationSearchText);
-        destinationInput.setText("");
-        travelSpinner.setSelection(0);
-
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
-
-        mUserLocation = getUserLocation();
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
+//        navigationMapFragment.clear();
+//        cameraFragment.clear();
+//
+//        EditText destinationInput = findViewById(R.id.locationSearchText);
+//        destinationInput.setText("");
+//        travelSpinner.setSelection(0);
+//
+//        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+//        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+//
+//        mUserLocation = getUserLocation();
+//        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
     }
 
     public void activateCamera(View view) {
