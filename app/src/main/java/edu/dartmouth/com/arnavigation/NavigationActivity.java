@@ -29,6 +29,8 @@ public class NavigationActivity extends AppCompatActivity {
     private EditText mLocationSearchText;
     private Spinner travelSpinner;
 
+    NonSwipingViewPager viewPager;
+
     CameraFragment cameraFragment = new CameraFragment();
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
@@ -52,7 +54,7 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     private void setupViewPager() {
-        NonSwipingViewPager viewPager = findViewById(R.id.navigation_view_pager);
+        viewPager = findViewById(R.id.navigation_view_pager);
 
         final ArrayList<Fragment> fragments = new ArrayList<>();
         fragments.add(cameraFragment);
@@ -113,9 +115,12 @@ public class NavigationActivity extends AppCompatActivity {
 //        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
     }
 
-    public void activateCamera(View view) {
-        Intent cameraActivityIntent = new Intent(this, CameraFragment.class);
-        startActivity(cameraActivityIntent);
+    public void switchViewsButtonClicked(View view) {
+        if(viewPager.getCurrentItem() == 0) {
+            viewPager.setCurrentItem(1,true);
+        } else {
+            viewPager.setCurrentItem(0,true);
+        }
     }
 
     @Override

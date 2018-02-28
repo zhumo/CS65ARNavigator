@@ -3,7 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context="edu.dartmouth.com.arnavigation.NavigationMapFragment">
+    tools:context="edu.dartmouth.com.arnavigation.NavigationActivity">
 
     <LinearLayout
         android:id="@+id/toolbar"
@@ -72,6 +72,6 @@
         android:layout_alignParentEnd="true"
         android:src="@android:drawable/ic_menu_camera"
         android:scaleType="center"
-        android:onClick="activateCamera"
+        android:onClick="switchViewsButtonClicked"
         android:layout_margin="@dimen/fab_margin" />
 </RelativeLayout>
