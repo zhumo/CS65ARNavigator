@@ -43,6 +43,15 @@
             android:name="com.google.ar.core"
             android:value="required" />
 
+        <activity android:name=".NavigationActivity"
+            android:label="@string/title_activity_navigation"
+            android:screenOrientation="portrait">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".MapsActivity"
             android:label="@string/title_activity_maps"
@@ -52,13 +61,7 @@
             android:label="@string/title_activity_permissions" />
         <activity
             android:name=".CameraActivity"
-            android:label="@string/title_activity_camera" >
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
+            android:label="@string/title_activity_camera" />
 
         <service
             android:name=".UpdateService"
