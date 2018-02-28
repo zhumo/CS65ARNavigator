@@ -56,13 +56,11 @@
                 android:onClick="resetMapButtonClicked"
                 android:text="reset"/>
 
-            <TextView
-                android:id="@+id/hello_world"
-                android:layout_width="fill_parent"
-                android:layout_height="fill_parent"
-                android:text="Hello, world!"
-                android:background="@android:color/holo_blue_bright"
-                android:textAlignment="center"/>
+            <edu.dartmouth.com.arnavigation.views.NonSwipingViewPager
+                android:id="@+id/navigation_view_pager"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                />
         </RelativeLayout>
     </LinearLayout>
 
