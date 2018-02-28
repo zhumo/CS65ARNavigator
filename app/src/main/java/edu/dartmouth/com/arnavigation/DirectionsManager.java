@@ -55,10 +55,6 @@ public class DirectionsManager {
         mContext = context;
     }
 
-    public DirectionsManager(Context context){
-        mContext = context;
-    }
-
     private void updateListeners(){
 
         Intent intent = new Intent();
