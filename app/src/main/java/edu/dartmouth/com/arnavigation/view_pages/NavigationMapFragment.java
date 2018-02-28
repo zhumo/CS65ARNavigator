@@ -28,14 +28,8 @@ import com.google.android.gms.maps.model.VisibleRegion;
 public class NavigationMapFragment extends SupportMapFragment implements OnMapReadyCallback {
 
     private GoogleMap mMap;
-    private LocationManager locationManager;
 
-    private BroadcastReceiver updateReceiver;
-
-    private LatLng mUserLocation;
-
-    private Criteria locationProviderCriteria;
-    private String bestLocationProvider;
+    private LatLng mUserLatLng;
 
     private float WIDTH_PIXELS;
 
@@ -49,67 +43,21 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         getActivity().getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         WIDTH_PIXELS = displayMetrics.widthPixels;
 
-        locationProviderCriteria = new Criteria();
-        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-
-        locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
-
         getMapAsync(this);
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        bestLocationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
-    }
-
-    @Override
-    public void onDestroy(){
-        //unregister receiver
-        getActivity().unregisterReceiver(updateReceiver);
-
-        super.onDestroy();
     }
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-    }
-    
-    private void setupMap() {
-        // Ignore this error because onCreate ensures location permission exists.
+
+        // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
 
-        Criteria locationProviderCriteria = new Criteria();
-        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
-        locationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
-
-        //set userLocation to first instance
-        mUserLocation = getUserLocation();
-
-        //set the map markers
-        setMarkers(null);
-
+        zoomToUser();
     }
 
-    private LatLng getUserLocation(){
-        // Ignore this error because onCreate ensures location permission exists.
-        Location lastKnownLocation = locationManager.getLastKnownLocation(locationProvider);
-
-
-        // Move the camera to last known location
-        LatLng lastKnownLatLng = new LatLng(
-                lastKnownLocation.getLatitude(),
-                lastKnownLocation.getLongitude()
-        );
-
-
-        //set userLocation to first instance
-        mUserLocation = getUserLocation();
-
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
-
-        return lastKnownLatLng;
+    private void zoomToUser() {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition) {
@@ -128,10 +76,10 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     private void setNewBounds(LatLng finalPosition) {
-        double minLat = Double.min(mUserLocation.latitude, finalPosition.latitude);
-        double maxLat = Double.max(mUserLocation.latitude, finalPosition.latitude);
-        double minLng = Double.min(mUserLocation.longitude, finalPosition.longitude);
-        double maxLng = Double.max(mUserLocation.longitude, finalPosition.longitude);
+        double minLat = Double.min(mUserLatLng.latitude, finalPosition.latitude);
+        double maxLat = Double.max(mUserLatLng.latitude, finalPosition.latitude);
+        double minLng = Double.min(mUserLatLng.longitude, finalPosition.longitude);
+        double maxLng = Double.max(mUserLatLng.longitude, finalPosition.longitude);
 
         LatLng sw = new LatLng(minLat, minLng);
         LatLng ne = new LatLng(maxLat, maxLng);
@@ -166,11 +114,12 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         return zoom;
     }
 
-    public void clear() {
+    public void setUserLocation(LatLng newLocation) { mUserLatLng = newLocation; }
+
+    public void reset() {
         /* Not yet implemented. Should remove any polylines. */
         mMap.clear();
-        mUserLocation = getUserLocation();
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
+        zoomToUser();
     }
 }
 

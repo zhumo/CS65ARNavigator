@@ -57,7 +57,7 @@
             android:label="@string/title_activity_permissions" />
 
         <service
-            android:name=".UpdateService"
+            android:name=".location.LocationService"
             android:enabled="true"
             android:exported="true"></service>
     </application>

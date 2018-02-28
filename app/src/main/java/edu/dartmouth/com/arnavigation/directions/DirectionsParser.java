@@ -1,6 +1,9 @@
 package edu.dartmouth.com.arnavigation.directions;
 
+import android.os.AsyncTask;
+
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PolylineOptions;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -26,7 +29,6 @@ public class DirectionsParser {
         JSONArray jSteps = null;
 
         try {
-
             jRoutes = jObject.getJSONArray("routes");
 
             // Loop for all routes
@@ -101,5 +103,75 @@ public class DirectionsParser {
 
         return poly;
     }
+//
+//    //async task to parse JSON response from request
+//    private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
+//        @Override
+//        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
+//
+//            JSONObject jsonObject = null;
+//
+//            List<List<HashMap<String, String>>> routes = null;
+//
+//            //use DirectionsParser class to parse JSONObject
+//            try {
+//                jsonObject = new JSONObject(strings[0]);
+//                DirectionsParser directionsParser = new DirectionsParser();
+//                routes = directionsParser.parse(jsonObject);
+//
+//            } catch (JSONException je) {
+//                je.printStackTrace();
+//            }
+//
+//            return routes;
+//        }
+//
+//        @Override
+//        protected void onPostExecute(List<List<HashMap<String, String>>> paths){
+//
+//            //draw paths
+//            ArrayList waypoints = null;
+//
+//            polylineOptions = new PolylineOptions();
+//
+//            if (paths.size() > 0) {
+//
+//                for (List<HashMap<String, String>> path : paths) {
+//                    waypoints = new ArrayList();
+//
+//                    for (HashMap<String, String> point : path) {
+//
+//                        //get values from json-created hashmap
+//                        Double lat = Double.parseDouble(point.get("lat"));
+//                        Double lng = Double.parseDouble(point.get("lon"));
+//
+//                        //add to waypoints
+//                        waypoints.add(new LatLng(lat, lng));
+//                    }
+//
+//                    addToPolyine(waypoints);
+//
+//                }
+//
+//
+//                //get last position latlng
+//                int lastPathIndex = paths.size() - 1;
+//                List<HashMap<String, String>> lastPath = paths.get(lastPathIndex);
+//                int lastPointIndex = lastPath.size() - 1;
+//                HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
+//                LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
+//                        Double.parseDouble(lastPointHashMap.get("lon")));
+//
+//                setLastLocation(lastLatLng);
+//            } else {
+//                mDestination = mOrigin;
+//                setLastLocation(mDestination);
+//            }
+//
+//            //update receivers
+//            updateListeners();
+//        }
+//    }
+
 
 }

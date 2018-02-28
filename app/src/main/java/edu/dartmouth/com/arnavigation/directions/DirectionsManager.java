@@ -3,6 +3,8 @@ package edu.dartmouth.com.arnavigation.directions;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Color;
+import android.location.Criteria;
+import android.location.LocationManager;
 import android.os.AsyncTask;
 import android.util.Log;
 
@@ -28,9 +30,6 @@ import javax.net.ssl.HttpsURLConnection;
  */
 
 public class DirectionsManager {
-
-    private String locationProvider;
-
     //for polyline
     private PolylineOptions polylineOptions;
     private static final float POLYLINE_WIDTH = 15;
@@ -43,9 +42,8 @@ public class DirectionsManager {
     private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String OUTPUT_TYPE = "json";
 
-
-    private LatLng mOrigin;
-    private LatLng mDestination;
+    public static String NEW_DIRECTIONS_ACTION = "directions.new";
+    public static String DIRECTIONS_JSON_KEY = "DirectionsJSON";
 
     Context mContext;
 
@@ -55,17 +53,6 @@ public class DirectionsManager {
         mContext = context;
     }
 
-    private void updateListeners(){
-
-        Intent intent = new Intent();
-
-        //set this as action (for now the only update from here)
-        intent.setAction("directions.update");
-
-        mContext.sendBroadcast(intent);
-    }
-
-
     private void addToPolyine(ArrayList<LatLng> waypoints) {
         //add new waypoints to polyline
         polylineOptions.addAll(waypoints);
@@ -74,9 +61,7 @@ public class DirectionsManager {
         polylineOptions.color(Color.BLUE);
     }
 
-
     public PolylineOptions getPolylineOptions() {
-
         if (polylineOptions == null) {
             return null;
         } else {
@@ -84,21 +69,9 @@ public class DirectionsManager {
         }
     }
 
-
-    private void setLastLocation(LatLng lastLocation){
-        mDestination = lastLocation;
-    }
-
-    public LatLng getLastLocation(){
-        return mDestination;
-    }
-
     public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode) {
-
-        mOrigin = originLatLng;
-
         //create URL request string using address
-        String origin = "origin=" + mOrigin.latitude + "," + mOrigin.longitude;
+        String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
         String destination = "destination=" + address;
         String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
@@ -109,17 +82,12 @@ public class DirectionsManager {
 
 
     public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode){
-
         //for now assume travel mode is walking
         travelMode = 0;
 
-
-        mOrigin = originLatLng;
-        mDestination = destinationLatLng;
-
         //create URL request string using LatLng
-        String origin = "origin=" + mOrigin.latitude + "," + mOrigin.longitude;
-        String destination = "destination=" + mDestination.latitude + "," + mDestination.longitude;
+        String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
+        String destination = "destination=" + destinationLatLng.latitude + "," + destinationLatLng.longitude;
         String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
 
@@ -127,55 +95,8 @@ public class DirectionsManager {
         startDirectionsWithURL(urlRequest);
     }
 
-
-
     private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
-    }
-
-    private String requestDirectionsWithURL(String reqURL){
-
-        //make API call with url
-
-        String responseString = "";
-        InputStream inputStream = null;
-        HttpsURLConnection httpsURLConnection = null;
-
-        try {
-            //get url connection
-            URL url = new URL(reqURL);
-            httpsURLConnection = (HttpsURLConnection) url.openConnection();
-            httpsURLConnection.connect();
-
-            //set up file reading streams
-            inputStream = httpsURLConnection.getInputStream();
-            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
-
-            StringBuffer stringBuffer = new StringBuffer();
-            String line = "";
-
-            //append to buffer
-            while ((line = bufferedReader.readLine()) != null) {
-                stringBuffer.append(line);
-            }
-
-            //get response string
-            responseString = stringBuffer.toString();
-
-            //close streams
-            inputStream.close();
-            inputStreamReader.close();
-            bufferedReader.close();
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            //disconnect from url
-            httpsURLConnection.disconnect();
-        }
-
-        return responseString;
     }
 
 
@@ -185,7 +106,6 @@ public class DirectionsManager {
     private class RequestDirectionsTask extends AsyncTask<String, Void, String> {
         @Override
         protected String doInBackground(String... strings) {
-
             String responseString = "";
 
             try {
@@ -201,79 +121,55 @@ public class DirectionsManager {
 
         @Override
         protected void onPostExecute(String result){
-
-            //parse JSON with new async task
-            new ParseDirectionsTask().execute(result);
+            Intent intent = new Intent();
+            intent.setAction(NEW_DIRECTIONS_ACTION);
+            intent.putExtra(DIRECTIONS_JSON_KEY, result);
+            mContext.sendBroadcast(intent);
         }
-    }
 
-    //async task to parse JSON response from request
-    private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
-        @Override
-        protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
+        private String requestDirectionsWithURL(String reqURL){
 
-            JSONObject jsonObject = null;
+            //make API call with url
 
-            List<List<HashMap<String, String>>> routes = null;
+            String responseString = "";
+            InputStream inputStream = null;
+            HttpsURLConnection httpsURLConnection = null;
 
-            //use DirectionsParser class to parse JSONObject
             try {
-                jsonObject = new JSONObject(strings[0]);
-                DirectionsParser directionsParser = new DirectionsParser();
-                routes = directionsParser.parse(jsonObject);
+                //get url connection
+                URL url = new URL(reqURL);
+                httpsURLConnection = (HttpsURLConnection) url.openConnection();
+                httpsURLConnection.connect();
 
-            } catch (JSONException je) {
-                je.printStackTrace();
-            }
+                //set up file reading streams
+                inputStream = httpsURLConnection.getInputStream();
+                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
 
-            return routes;
-        }
+                StringBuffer stringBuffer = new StringBuffer();
+                String line = "";
 
-        @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> paths){
-
-            //draw paths
-            ArrayList waypoints = null;
-
-            polylineOptions = new PolylineOptions();
-
-            if (paths.size() > 0) {
-
-                for (List<HashMap<String, String>> path : paths) {
-                    waypoints = new ArrayList();
-
-                    for (HashMap<String, String> point : path) {
-
-                        //get values from json-created hashmap
-                        Double lat = Double.parseDouble(point.get("lat"));
-                        Double lng = Double.parseDouble(point.get("lon"));
-
-                        //add to waypoints
-                        waypoints.add(new LatLng(lat, lng));
-                    }
-
-                    addToPolyine(waypoints);
-
+                //append to buffer
+                while ((line = bufferedReader.readLine()) != null) {
+                    stringBuffer.append(line);
                 }
 
+                //get response string
+                responseString = stringBuffer.toString();
 
-                //get last position latlng
-                int lastPathIndex = paths.size() - 1;
-                List<HashMap<String, String>> lastPath = paths.get(lastPathIndex);
-                int lastPointIndex = lastPath.size() - 1;
-                HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
-                LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
-                        Double.parseDouble(lastPointHashMap.get("lon")));
+                //close streams
+                inputStream.close();
+                inputStreamReader.close();
+                bufferedReader.close();
 
-                setLastLocation(lastLatLng);
-            } else {
-                mDestination = mOrigin;
-                setLastLocation(mDestination);
+            } catch (IOException e) {
+                e.printStackTrace();
+            } finally {
+                //disconnect from url
+                httpsURLConnection.disconnect();
             }
 
-            //update receivers
-            updateListeners();
+            return responseString;
         }
     }
-
 }

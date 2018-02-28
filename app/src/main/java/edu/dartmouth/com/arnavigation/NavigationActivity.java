@@ -6,10 +6,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.ArrayAdapter;
@@ -19,11 +23,11 @@ import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.util.ArrayList;
 
 import edu.dartmouth.com.arnavigation.directions.DirectionsManager;
+import edu.dartmouth.com.arnavigation.location.LocationService;
 import edu.dartmouth.com.arnavigation.permissions.PermissionManager;
 import edu.dartmouth.com.arnavigation.view_pages.CameraFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NavigationMapFragment;
@@ -38,52 +42,136 @@ public class NavigationActivity extends AppCompatActivity {
 
     private DirectionsManager directionsManager;
 
+    public LatLng currentLatLng;
+
     NonSwipingViewPager viewPager;
 
     CameraFragment cameraFragment = new CameraFragment();
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
-    BroadcastReceiver directionsUpdatedReceiver;
+    BroadcastReceiver newDirectionsReceiver;
+
+    BroadcastReceiver updateLocationReceiver;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
 
-        directionsManager = new DirectionsManager(this);
+        // get destination input
+        mLocationSearchText = findViewById(R.id.locationSearchText);
+
+        // get and set travel spinner
+        travelSpinner = findViewById(R.id.travelSpinner);
+        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
+        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
+        travelSpinner.setAdapter(travelAdapter);
+
+        updateLocationReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+            LatLng newLatLng = new LatLng(
+                intent.getExtras().getDouble(LocationService.LATITUDE_KEY),
+                intent.getExtras().getDouble(LocationService.LONGITUDE_KEY)
+            );
+            currentLatLng = newLatLng;
+            }
+        };
+
+        newDirectionsReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
+                Log.d("mztag", rawDirectionsJSON);
+//                try {
+//                    JSONObject directionsJSON = new JSONObject(rawDirectionsJSON);
+//                    if (directionsJSON.get("status").equals("OK")){
+//                        navigationMapFragment.new
+//                    } else {
+//                        Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
+//                    }
+//                } catch (JSONException e) {
+//                    e.printStackTrace();
+//                    Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
+//                }
+            }
+        };
 
         PermissionManager.ensurePermissions(
             this,
             0,
             new PermissionManager.OnHasPermission() {
                 @Override
-                public void onHasPermission() {
-                    setupViewPager();
-                }
+                public void onHasPermission() { initialize(); }
             },
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.CAMERA
         );
     }
 
-    private void setupViewPager() {
+    private void initialize() {
+        // Set up directions manager with listener.
+        directionsManager = new DirectionsManager(NavigationActivity.this);
+        IntentFilter newDirectionsIntentFilter = new IntentFilter();
+        newDirectionsIntentFilter.addAction(DirectionsManager.NEW_DIRECTIONS_ACTION);
+        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
+
+        // Start location service
+        Intent startLocationServiceIntent = new Intent(NavigationActivity.this, LocationService.class);
+        startService(startLocationServiceIntent);
+
+        // Get last known location and initialize map fragment with that info
+        Criteria locationProviderCriteria = new Criteria();
+        locationProviderCriteria.setAccuracy(Criteria.ACCURACY_FINE);
+        LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        String bestLocationProvider = locationManager.getBestProvider(locationProviderCriteria, true);
+
+        Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
+
+        currentLatLng = new LatLng(
+                lastKnownLocation.getLatitude(),
+                lastKnownLocation.getLongitude()
+        );
+        navigationMapFragment.setUserLocation(currentLatLng);
+
+        // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
 
-        final ArrayList<Fragment> fragments = new ArrayList<>();
+        ArrayList<Fragment> fragments = new ArrayList<>();
         fragments.add(cameraFragment);
         fragments.add(navigationMapFragment);
 
         ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager(), fragments);
         viewPager.setAdapter(viewPagerAdapter);
+    }
 
-        //get destination input
-        mLocationSearchText = findViewById(R.id.locationSearchText);
+    @Override
+    protected void onResume() {
+        super.onResume();
 
-        //get and set travel spinner
-        travelSpinner = findViewById(R.id.travelSpinner);
-        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
-        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
-        travelSpinner.setAdapter(travelAdapter);
+        IntentFilter updateLocationIntentFilter = new IntentFilter();
+        updateLocationIntentFilter.addAction(LocationService.UPDATE_LOCATION_ACTION);
+        registerReceiver(updateLocationReceiver, updateLocationIntentFilter);
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+
+        unregisterReceiver(updateLocationReceiver);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+
+        // don't kill the service for screen rotations
+        if(isChangingConfigurations()) {
+            Intent intent = new Intent(this, LocationService.class);
+            stopService(intent);
+        }
+
+        unregisterReceiver(newDirectionsReceiver);
     }
 
     public void locationSearchPressed(View v) {
@@ -105,16 +193,13 @@ public class NavigationActivity extends AppCompatActivity {
         //assume address for now
         String address = mLocationSearchText.getText().toString();
 
-        //update userLocation value
-        mUserLocation = getUserLocation();
-
         //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
+        directionsManager.getDirectionsWithAddress(currentLatLng, address, travelSpinner.getSelectedItemPosition());
     }
 
     public void resetButtonClicked(View v) {
-        navigationMapFragment.clear();
-        cameraFragment.clear();
+        navigationMapFragment.reset();
+        cameraFragment.reset();
 
         EditText destinationInput = findViewById(R.id.locationSearchText);
         destinationInput.setText("");
@@ -125,49 +210,15 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void switchViewsButtonClicked(View view) {
-        if(viewPager.getCurrentItem() == 0) {
-            viewPager.setCurrentItem(1,true);
-        } else {
-            viewPager.setCurrentItem(0,true);
-        }
+        int nextViewPageIndex = (viewPager.getCurrentItem() + 1) % 2;
+        viewPager.setCurrentItem(nextViewPageIndex,true);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(resultCode == Activity.RESULT_OK) { setupViewPager(); }
+        if(resultCode == Activity.RESULT_OK) { initialize(); }
         else { finish(); }
-    }
-
-    private void setUpdateReceiver(){
-
-        IntentFilter intentFilter = new IntentFilter();
-
-        intentFilter.addAction("directions.update");
-        //intentFilter.addAction("location.update");
-
-        directionsUpdatedReceiver = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-
-                if (intent.getAction() == "directions.update"){
-                    //update directions
-                    PolylineOptions polylineOptions = directionsManager.getPolylineOptions();
-                    LatLng lastLatLng = directionsManager.getLastLocation();
-
-                    //handle polyline
-                    if (polylineOptions != null){
-                        mMap.clear();
-                        setMarkers(lastLatLng);
-                        mMap.addPolyline(polylineOptions);
-                    } else {
-                        Toast.makeText(getContext(), "Could not find directions.", Toast.LENGTH_SHORT).show();
-                    }
-                }
-            }
-        };
-
-        registerReceiver(directionsUpdatedReceiver, intentFilter);
     }
 }

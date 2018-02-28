@@ -403,7 +403,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         });
     }
 
-    public void clear() {
+    public void reset() {
         /* Not implemented. Should remove any path drawings. */
     }
 }
