@@ -53,15 +53,8 @@
             </intent-filter>
         </activity>
         <activity
-            android:name=".MapActivity"
-            android:label="@string/title_activity_maps"
-            android:screenOrientation="portrait"/>
-        <activity
             android:name=".PermissionsActivity"
             android:label="@string/title_activity_permissions" />
-        <activity
-            android:name=".CameraActivity"
-            android:label="@string/title_activity_camera" />
 
         <service
             android:name=".UpdateService"

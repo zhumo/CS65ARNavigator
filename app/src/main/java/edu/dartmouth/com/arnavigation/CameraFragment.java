@@ -22,13 +22,17 @@ import android.content.Intent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.GestureDetector;
+import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowManager;
 
 import com.google.ar.core.Anchor;
@@ -60,8 +64,8 @@ import javax.microedition.khronos.opengles.GL10;
  * the ARCore API. The application will display any detected planes and will allow the user to
  * tap on a plane to place a 3d model of the Android robot.
  */
-public class CameraActivity extends AppCompatActivity implements GLSurfaceView.Renderer {
-    private static final String TAG = CameraActivity.class.getSimpleName();
+public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
+    private static final String TAG = CameraFragment.class.getSimpleName();
 
     private static int CAMERA_PERMISSION_REQUEST_CODE = 0;
 
@@ -87,14 +91,13 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     private final ArrayList<Anchor> mAnchors = new ArrayList<>();
 
     @Override
-    protected void onCreate(Bundle savedInstanceState) {
+    public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.camera_fragment);
-        mSurfaceView = (GLSurfaceView) findViewById(R.id.surfaceview);
-        mDisplayRotationHelper = new DisplayRotationHelper(/*context=*/ this);
+        setRetainInstance(true);
+        mDisplayRotationHelper = new DisplayRotationHelper(getContext());
 
         // Set up tap listener.
-        mGestureDetector = new GestureDetector(this, new GestureDetector.SimpleOnGestureListener() {
+        mGestureDetector = new GestureDetector(getContext(), new GestureDetector.SimpleOnGestureListener() {
             @Override
             public boolean onSingleTapUp(MotionEvent e) {
                 onSingleTap(e);
@@ -124,7 +127,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         Exception exception = null;
         String message = null;
         try {
-            mSession = new Session(/* context= */ this);
+            mSession = new Session(getContext());
         } catch (UnavailableArcoreNotInstalledException e) {
             message = "Please install ARCore";
             exception = e;
@@ -153,15 +156,24 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         mSession.configure(config);
     }
 
+    @Nullable
     @Override
-    protected void onResume() {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View fragmentView = inflater.inflate(R.layout.camera_fragment, container, false);
+        mSurfaceView = fragmentView.findViewById(R.id.surfaceview);
+
+        return fragmentView;
+    }
+
+    @Override
+    public void onResume() {
         super.onResume();
 
         // ARCore requires camera permissions to operate. If we did not yet obtain runtime
         // permission on Android M and above, now is a good time to ask the user for it.
         PermissionManager.ensurePermission(
             Manifest.permission.CAMERA,
-            this,
+            getActivity(),
             CAMERA_PERMISSION_REQUEST_CODE,
             new PermissionManager.OnHasPermission() {
                 @Override
@@ -192,18 +204,18 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     }
 
     @Override
-    public void onWindowFocusChanged(boolean hasFocus) {
-        super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if (isVisibleToUser) {
             // Standard Android full-screen functionality.
-            getWindow().getDecorView().setSystemUiVisibility(
+            getActivity().getWindow().getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_LAYOUT_STABLE
                             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
                             | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                             | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
                             | View.SYSTEM_UI_FLAG_FULLSCREEN
                             | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         }
     }
 
@@ -217,17 +229,17 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
         // Create the texture and pass it to ARCore session to be filled during update().
-        mBackgroundRenderer.createOnGlThread(/*context=*/ this);
+        mBackgroundRenderer.createOnGlThread(getContext());
         if (mSession != null) {
             mSession.setCameraTextureName(mBackgroundRenderer.getTextureId());
         }
 
         // Prepare the other rendering objects.
         try {
-            mVirtualObject.createOnGlThread(/*context=*/this, "andy.obj", "andy.png");
+            mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-            mVirtualObjectShadow.createOnGlThread(/*context=*/this,
+            mVirtualObjectShadow.createOnGlThread(getContext(),
                     "andy_shadow.obj", "andy_shadow.png");
             mVirtualObjectShadow.setBlendMode(BlendMode.Shadow);
             mVirtualObjectShadow.setMaterialProperties(1.0f, 0.0f, 0.0f, 1.0f);
@@ -235,11 +247,11 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
             Log.e(TAG, "Failed to read obj file");
         }
         try {
-            mPlaneRenderer.createOnGlThread(/*context=*/this, "trigrid.png");
+            mPlaneRenderer.createOnGlThread(getContext(), "trigrid.png");
         } catch (IOException e) {
             Log.e(TAG, "Failed to read plane texture");
         }
-        mPointCloud.createOnGlThread(/*context=*/this);
+        mPointCloud.createOnGlThread(getContext());
     }
 
     @Override
@@ -361,7 +373,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
 
     private void showSnackbarMessage(String message, boolean finishOnDismiss) {
         mMessageSnackbar = Snackbar.make(
-                CameraActivity.this.findViewById(android.R.id.content),
+                getView().findViewById(android.R.id.content),
                 message, Snackbar.LENGTH_INDEFINITE);
         mMessageSnackbar.getView().setBackgroundColor(0xbf323232);
         if (finishOnDismiss) {
@@ -378,7 +390,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
                         @Override
                         public void onDismissed(Snackbar transientBottomBar, int event) {
                             super.onDismissed(transientBottomBar, event);
-                            finish();
+                            getActivity().finish();
                         }
                     });
         }
@@ -386,7 +398,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     }
 
     private void showLoadingMessage() {
-        runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 showSnackbarMessage("Searching for surfaces...", false);
@@ -395,7 +407,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     }
 
     private void hideLoadingMessage() {
-        runOnUiThread(new Runnable() {
+        getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
                 if (mMessageSnackbar != null) {
@@ -407,11 +419,11 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     }
 
     @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if(requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
             if(resultCode == Activity.RESULT_OK) { /* NOOP */ }
-            else { finish(); }
+            else { getActivity().finish(); }
         }
     }
 }

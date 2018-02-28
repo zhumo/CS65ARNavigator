@@ -2,11 +2,11 @@ package edu.dartmouth.com.arnavigation.views;
 
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
-import android.support.v4.app.FragmentPagerAdapter;
+import android.support.v4.app.FragmentStatePagerAdapter;
 
 import java.util.ArrayList;
 
-public class ViewPagerAdapter extends FragmentPagerAdapter {
+public class ViewPagerAdapter extends FragmentStatePagerAdapter {
 
     private ArrayList<Fragment> fragments;
     public ViewPagerAdapter(FragmentManager fragmentManager, ArrayList<Fragment> frags) {
