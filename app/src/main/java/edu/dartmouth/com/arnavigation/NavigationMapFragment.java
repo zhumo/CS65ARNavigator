@@ -10,6 +10,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -212,6 +213,9 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
     public void clear() {
         /* Not yet implemented. Should remove any polylines. */
+        mMap.clear();
+        mUserLocation = getUserLocation();
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
     }
 }
 

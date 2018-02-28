@@ -53,7 +53,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentTop="true"
                 android:layout_alignParentStart="true"
-                android:onClick="resetMapButtonClicked"
+                android:onClick="resetButtonClicked"
                 android:text="reset"/>
 
             <edu.dartmouth.com.arnavigation.views.NonSwipingViewPager

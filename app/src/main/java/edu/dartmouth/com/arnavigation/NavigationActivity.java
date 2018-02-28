@@ -100,19 +100,16 @@ public class NavigationActivity extends AppCompatActivity {
 //        directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
     }
 
-    public void resetMapButtonClicked(View v) {
-//        navigationMapFragment.clear();
-//        cameraFragment.clear();
-//
-//        EditText destinationInput = findViewById(R.id.locationSearchText);
-//        destinationInput.setText("");
-//        travelSpinner.setSelection(0);
-//
-//        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-//        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
-//
-//        mUserLocation = getUserLocation();
-//        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLocation, 17.0f));
+    public void resetButtonClicked(View v) {
+        navigationMapFragment.clear();
+        cameraFragment.clear();
+
+        EditText destinationInput = findViewById(R.id.locationSearchText);
+        destinationInput.setText("");
+        travelSpinner.setSelection(0);
+
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
     }
 
     public void switchViewsButtonClicked(View view) {
