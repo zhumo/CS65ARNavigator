@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.dartmouth.com.arnavigation.rendering;
+package edu.dartmouth.com.arnavigation.renderers;
 
 import android.content.Context;
 import android.opengl.GLES20;

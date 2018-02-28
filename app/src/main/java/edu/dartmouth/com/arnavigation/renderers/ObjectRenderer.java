@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.dartmouth.com.arnavigation.rendering;
+package edu.dartmouth.com.arnavigation.renderers;
 
 import android.content.Context;
 import android.graphics.Bitmap;
@@ -25,7 +25,6 @@ import de.javagl.obj.Obj;
 import de.javagl.obj.ObjData;
 import de.javagl.obj.ObjReader;
 import de.javagl.obj.ObjUtils;
-import edu.dartmouth.com.arnavigation.rendering.ShaderUtil;
 
 import java.io.IOException;
 import java.io.InputStream;

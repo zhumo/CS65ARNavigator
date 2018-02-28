@@ -12,7 +12,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package edu.dartmouth.com.arnavigation.rendering;
+package edu.dartmouth.com.arnavigation.renderers;
 
 import android.content.Context;
 import android.opengl.GLES11Ext;
@@ -26,8 +26,6 @@ import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
-
-import edu.dartmouth.com.arnavigation.rendering.ShaderUtil;
 
 /**
  * This class renders the AR background from camera feed. It creates and hosts the texture
