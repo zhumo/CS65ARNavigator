@@ -31,6 +31,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
@@ -54,6 +55,8 @@ import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -86,6 +89,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     // Tap handling and UI.
     private final ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
     private final ArrayList<Anchor> mAnchors = new ArrayList<>();
+
+    //location reference
+    private LatLng mUserLatLng;
+    private LatLng mDestination;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -405,5 +412,26 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
     public void reset() {
         /* Not implemented. Should remove any path drawings. */
+    }
+
+    public void createNewDirections(List<List<HashMap<String, String>>> path){
+
+        if (path.size() > 0) {
+
+            //get last position latlng
+            int lastPathIndex = path.size() - 1;
+            List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
+            int lastPointIndex = lastPath.size() - 1;
+            HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
+            mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
+                    Double.parseDouble(lastPointHashMap.get("lon")));
+
+
+            //run polyline task
+            new NavigationMapFragment.ParseMapDirectionsTask().execute(path);
+        }
+        else {
+            mDestination = mUserLatLng;
+        }
     }
 }

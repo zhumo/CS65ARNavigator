@@ -47,26 +47,20 @@ public class DirectionsManager {
 
     Context mContext;
 
+    List<List<HashMap<String, String>>> paths;
+
     //use this constructor for broadcasting
 
     public DirectionsManager(Context context) {
         mContext = context;
     }
 
-    private void addToPolyine(ArrayList<LatLng> waypoints) {
-        //add new waypoints to polyline
-        polylineOptions.addAll(waypoints);
-        polylineOptions.width(POLYLINE_WIDTH);
-        polylineOptions.geodesic(true);
-        polylineOptions.color(Color.BLUE);
+    private void setPaths(List<List<HashMap<String, String>>> newPaths){
+        paths = newPaths;
     }
 
-    public PolylineOptions getPolylineOptions() {
-        if (polylineOptions == null) {
-            return null;
-        } else {
-            return polylineOptions;
-        }
+    public List<List<HashMap<String, String>>> getPaths(){
+        return paths;
     }
 
     public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode) {
@@ -95,6 +89,53 @@ public class DirectionsManager {
         startDirectionsWithURL(urlRequest);
     }
 
+    private String requestDirectionsWithURL(String reqURL){
+
+        //make API call with url
+
+        String responseString = "";
+        InputStream inputStream = null;
+        HttpsURLConnection httpsURLConnection = null;
+
+        try {
+            //get url connection
+            URL url = new URL(reqURL);
+            httpsURLConnection = (HttpsURLConnection) url.openConnection();
+            httpsURLConnection.connect();
+
+            //set up file reading streams
+            inputStream = httpsURLConnection.getInputStream();
+            InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
+            BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+
+            StringBuffer stringBuffer = new StringBuffer();
+            String line = "";
+
+            //append to buffer
+            while ((line = bufferedReader.readLine()) != null) {
+                stringBuffer.append(line);
+            }
+
+            //get response string
+            responseString = stringBuffer.toString();
+
+            //close streams
+            inputStream.close();
+            inputStreamReader.close();
+            bufferedReader.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            //disconnect from url
+            httpsURLConnection.disconnect();
+        }
+
+        return responseString;
+    }
+
+
+
     private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
     }
@@ -120,56 +161,44 @@ public class DirectionsManager {
         }
 
         @Override
-        protected void onPostExecute(String result){
-            Intent intent = new Intent();
-            intent.setAction(NEW_DIRECTIONS_ACTION);
-            intent.putExtra(DIRECTIONS_JSON_KEY, result);
-            mContext.sendBroadcast(intent);
+        protected void onPostExecute(String result) {
+            new ParseDirectionsTask().execute(result);
         }
 
-        private String requestDirectionsWithURL(String reqURL){
+        //async task to parse JSON response from request
+        private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
+            @Override
+            protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
 
-            //make API call with url
+                JSONObject jsonObject = null;
 
-            String responseString = "";
-            InputStream inputStream = null;
-            HttpsURLConnection httpsURLConnection = null;
+                List<List<HashMap<String, String>>> routes = null;
 
-            try {
-                //get url connection
-                URL url = new URL(reqURL);
-                httpsURLConnection = (HttpsURLConnection) url.openConnection();
-                httpsURLConnection.connect();
+                //use DirectionsParser class to parse JSONObject
+                try {
+                    jsonObject = new JSONObject(strings[0]);
+                    DirectionsParser directionsParser = new DirectionsParser();
+                    routes = directionsParser.parse(jsonObject);
 
-                //set up file reading streams
-                inputStream = httpsURLConnection.getInputStream();
-                InputStreamReader inputStreamReader = new InputStreamReader(inputStream);
-                BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                    String encodedPoly = jsonObject.getJSONObject("overview_polyline").getString("points");
 
-                StringBuffer stringBuffer = new StringBuffer();
-                String line = "";
-
-                //append to buffer
-                while ((line = bufferedReader.readLine()) != null) {
-                    stringBuffer.append(line);
+                } catch (JSONException je) {
+                    je.printStackTrace();
                 }
 
-                //get response string
-                responseString = stringBuffer.toString();
+                if (paths != null) {
+                    setPaths(paths);
+                }
 
-                //close streams
-                inputStream.close();
-                inputStreamReader.close();
-                bufferedReader.close();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                //disconnect from url
-                httpsURLConnection.disconnect();
+                return routes;
             }
 
-            return responseString;
+            @Override
+            protected void onPostExecute(List<List<HashMap<String, String>>> paths) {
+                Intent intent = new Intent();
+                intent.setAction(NEW_DIRECTIONS_ACTION);
+                mContext.sendBroadcast(intent);
+            }
         }
     }
 }

@@ -83,6 +83,10 @@ public class NavigationActivity extends AppCompatActivity {
             public void onReceive(Context context, Intent intent) {
                 String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
                 Log.d("mztag", rawDirectionsJSON);
+
+                navigationMapFragment.createNewDirections(directionsManager.getPaths());
+                cameraFragment.createNewDirections(directionsManager.getPaths());
+
 //                try {
 //                    JSONObject directionsJSON = new JSONObject(rawDirectionsJSON);
 //                    if (directionsJSON.get("status").equals("OK")){
@@ -207,6 +211,9 @@ public class NavigationActivity extends AppCompatActivity {
 
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+
+        Button searchButton = findViewById(R.id.searchButton);
+        searchButton.setEnabled(true);
     }
 
     public void switchViewsButtonClicked(View view) {
