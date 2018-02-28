@@ -35,8 +35,10 @@ public class DirectionsManager {
 
     //for URL request
 
+
     private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
+
     private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String OUTPUT_TYPE = "json";
@@ -48,11 +50,16 @@ public class DirectionsManager {
     Context mContext;
 
     //use this constructor for broadcasting
+
     public DirectionsManager(Context context) {
         mContext = context;
     }
 
-    private void updateListeners() {
+    public DirectionsManager(Context context){
+        mContext = context;
+    }
+
+    private void updateListeners(){
 
         Intent intent = new Intent();
 
@@ -73,6 +80,7 @@ public class DirectionsManager {
 
 
     public PolylineOptions getPolylineOptions() {
+
         if (polylineOptions == null) {
             return null;
         } else {
@@ -81,15 +89,13 @@ public class DirectionsManager {
     }
 
 
-    private void setLastLocation(LatLng lastLocation) {
+    private void setLastLocation(LatLng lastLocation){
         mDestination = lastLocation;
     }
 
-
-    public LatLng getLastLocation() {
+    public LatLng getLastLocation(){
         return mDestination;
     }
-
 
     public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode) {
 
@@ -105,7 +111,8 @@ public class DirectionsManager {
         startDirectionsWithURL(urlRequest);
     }
 
-    public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode) {
+
+    public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode){
 
         //for now assume travel mode is walking
         travelMode = 0;
@@ -125,12 +132,13 @@ public class DirectionsManager {
     }
 
 
-    private void startDirectionsWithURL(String url) {
+
+    private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
     }
 
+    private String requestDirectionsWithURL(String reqURL){
 
-    private String requestDirectionsWithURL(String reqURL) {
         //make API call with url
 
         String responseString = "";
@@ -196,7 +204,8 @@ public class DirectionsManager {
         }
 
         @Override
-        protected void onPostExecute(String result) {
+        protected void onPostExecute(String result){
+
             //parse JSON with new async task
             new ParseDirectionsTask().execute(result);
         }
@@ -216,6 +225,7 @@ public class DirectionsManager {
                 jsonObject = new JSONObject(strings[0]);
                 DirectionsParser directionsParser = new DirectionsParser();
                 routes = directionsParser.parse(jsonObject);
+
             } catch (JSONException je) {
                 je.printStackTrace();
             }
@@ -224,7 +234,7 @@ public class DirectionsManager {
         }
 
         @Override
-        protected void onPostExecute(List<List<HashMap<String, String>>> paths) {
+        protected void onPostExecute(List<List<HashMap<String, String>>> paths){
 
             //draw paths
             ArrayList waypoints = null;
