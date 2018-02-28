@@ -67,8 +67,6 @@ import javax.microedition.khronos.opengles.GL10;
 public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     private static final String TAG = CameraFragment.class.getSimpleName();
 
-    private static int CAMERA_PERMISSION_REQUEST_CODE = 0;
-
     // Rendering. The Renderers are created here, and initialized when the GL surface is created.
     private GLSurfaceView mSurfaceView;
 
@@ -418,12 +416,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         });
     }
 
-    @Override
-    public void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-            if(resultCode == Activity.RESULT_OK) { /* NOOP */ }
-            else { getActivity().finish(); }
-        }
+    public void clear() {
+        /* Not implemented. Should remove any path drawings. */
     }
 }

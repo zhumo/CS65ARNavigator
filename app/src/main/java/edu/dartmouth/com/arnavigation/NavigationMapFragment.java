@@ -34,8 +34,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
     private BroadcastReceiver updateReceiver;
 
-    private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
-
     private LatLng mUserLocation;
 
     private Criteria locationProviderCriteria;
@@ -222,6 +220,10 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         zoom -= 2; //zoom out to include everything
 
         return zoom;
+    }
+
+    public void clear() {
+        /* Not yet implemented. Should remove any polylines. */
     }
 }
 

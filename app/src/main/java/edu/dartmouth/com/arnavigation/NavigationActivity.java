@@ -23,11 +23,16 @@ import edu.dartmouth.com.arnavigation.views.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.views.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
+    private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
+    private static int CAMERA_PERMISSION_REQUEST_CODE = 1;
 
     private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
 
     private EditText mLocationSearchText;
     private Spinner travelSpinner;
+
+    CameraFragment cameraFragment = new CameraFragment();
+    NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -37,12 +42,11 @@ public class NavigationActivity extends AppCompatActivity {
         NonSwipingViewPager viewPager = findViewById(R.id.navigation_view_pager);
 
         final ArrayList<Fragment> fragments = new ArrayList<>();
-        fragments.add(new CameraFragment());
-        fragments.add(new NavigationMapFragment());
+        fragments.add(cameraFragment);
+        fragments.add(navigationMapFragment);
 
         ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager(), fragments);
         viewPager.setAdapter(viewPagerAdapter);
-
 
         //get destination input
         mLocationSearchText = findViewById(R.id.locationSearchText);
@@ -53,7 +57,6 @@ public class NavigationActivity extends AppCompatActivity {
         travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
         travelSpinner.setAdapter(travelAdapter);
     }
-
 
     public void locationSearchPressed(View v) {
         //check if empty string
@@ -80,12 +83,13 @@ public class NavigationActivity extends AppCompatActivity {
 
         //pass to DirectionsManager address function
         directionsManager.getDirectionsWithAddress(mUserLocation, address, travelSpinner.getSelectedItemPosition());
-
     }
 
     public void resetMapButtonClicked(View v) {
-        mMap.clear();
-        EditText destinationInput = (EditText) findViewById(R.id.locationSearchText);
+        navigationMapFragment.clear();
+        cameraFragment.clear();
+
+        EditText destinationInput = findViewById(R.id.locationSearchText);
         destinationInput.setText("");
         travelSpinner.setSelection(0);
 
@@ -97,20 +101,15 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void activateCamera(View view) {
-        Intent cameraActivityIntent = new Intent(getContext(), CameraFragment.class);
+        Intent cameraActivityIntent = new Intent(this, CameraFragment.class);
         startActivity(cameraActivityIntent);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-            if (resultCode == Activity.RESULT_OK) {
-                setupMap();
-            } else {
-                getActivity().finish();
-            }
-        }
-    }
 
+        if(resultCode == Activity.RESULT_OK) { /* NOOP */ }
+        else { finish(); }
+    }
 }
