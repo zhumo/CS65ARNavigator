@@ -89,7 +89,7 @@ public class CameraActivity extends AppCompatActivity implements GLSurfaceView.R
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_camera);
+        setContentView(R.layout.camera_fragment);
         mSurfaceView = (GLSurfaceView) findViewById(R.id.surfaceview);
         mDisplayRotationHelper = new DisplayRotationHelper(/*context=*/ this);
 
