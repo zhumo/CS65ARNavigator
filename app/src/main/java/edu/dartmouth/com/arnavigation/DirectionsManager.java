@@ -34,7 +34,11 @@ public class DirectionsManager {
     private static final float POLYLINE_WIDTH = 15;
 
     //for URL request
-    private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};    private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
+
+
+    private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
+    private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
+
     private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String OUTPUT_TYPE = "json";
@@ -46,6 +50,11 @@ public class DirectionsManager {
     Context mContext;
 
     //use this constructor for broadcasting
+
+    public DirectionsManager(Context context) {
+        mContext = context;
+    }
+
     public DirectionsManager(Context context){
         mContext = context;
     }
@@ -71,8 +80,12 @@ public class DirectionsManager {
 
 
     public PolylineOptions getPolylineOptions() {
-        if(polylineOptions == null) {return null;}
-        else {return polylineOptions;}
+
+        if (polylineOptions == null) {
+            return null;
+        } else {
+            return polylineOptions;
+        }
     }
 
 
@@ -80,33 +93,38 @@ public class DirectionsManager {
         mDestination = lastLocation;
     }
 
-
     public LatLng getLastLocation(){
         return mDestination;
     }
 
+    public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode) {
 
-    public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode){
+        mOrigin = originLatLng;
 
         //create URL request string using address
-        String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
+        String origin = "origin=" + mOrigin.latitude + "," + mOrigin.longitude;
         String destination = "destination=" + address;
-        String param = origin +"&" + destination +"&" + TRAVEL_MODES[travelMode];
+        String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
 
         //start directions task
         startDirectionsWithURL(urlRequest);
     }
+
 
     public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode){
 
         //for now assume travel mode is walking
         travelMode = 0;
 
+
+        mOrigin = originLatLng;
+        mDestination = destinationLatLng;
+
         //create URL request string using LatLng
-        String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
-        String destination = "destination=" + destinationLatLng.latitude + "," + destinationLatLng.longitude;
-        String param = origin +"&" + destination +"&" + TRAVEL_MODES[travelMode];
+        String origin = "origin=" + mOrigin.latitude + "," + mOrigin.longitude;
+        String destination = "destination=" + mDestination.latitude + "," + mDestination.longitude;
+        String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
 
         //start directions task
@@ -114,12 +132,13 @@ public class DirectionsManager {
     }
 
 
+
     private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
     }
 
-
     private String requestDirectionsWithURL(String reqURL){
+
         //make API call with url
 
         String responseString = "";
@@ -153,7 +172,7 @@ public class DirectionsManager {
             inputStreamReader.close();
             bufferedReader.close();
 
-        }catch (IOException e){
+        } catch (IOException e) {
             e.printStackTrace();
         } finally {
             //disconnect from url
@@ -186,6 +205,7 @@ public class DirectionsManager {
 
         @Override
         protected void onPostExecute(String result){
+
             //parse JSON with new async task
             new ParseDirectionsTask().execute(result);
         }
@@ -205,7 +225,8 @@ public class DirectionsManager {
                 jsonObject = new JSONObject(strings[0]);
                 DirectionsParser directionsParser = new DirectionsParser();
                 routes = directionsParser.parse(jsonObject);
-            } catch (JSONException je){
+
+            } catch (JSONException je) {
                 je.printStackTrace();
             }
 
@@ -218,35 +239,41 @@ public class DirectionsManager {
             //draw paths
             ArrayList waypoints = null;
 
-            PolylineOptions polylineOptions = null;
+            polylineOptions = new PolylineOptions();
 
-            for (List<HashMap<String, String>> path: paths){
-                waypoints = new ArrayList();
-                polylineOptions = new PolylineOptions();
+            if (paths.size() > 0) {
 
-                for (HashMap<String, String> point: path) {
+                for (List<HashMap<String, String>> path : paths) {
+                    waypoints = new ArrayList();
 
-                    //get values from json-created hashmap
-                    Double lat = Double.parseDouble(point.get("lat"));
-                    Double lng = Double.parseDouble(point.get("lon"));
+                    for (HashMap<String, String> point : path) {
 
-                    //add to waypoints
-                    waypoints.add(new LatLng(lat,lng));
+                        //get values from json-created hashmap
+                        Double lat = Double.parseDouble(point.get("lat"));
+                        Double lng = Double.parseDouble(point.get("lon"));
+
+                        //add to waypoints
+                        waypoints.add(new LatLng(lat, lng));
+                    }
+
+                    addToPolyine(waypoints);
+
                 }
 
-                addToPolyine(waypoints);
 
+                //get last position latlng
+                int lastPathIndex = paths.size() - 1;
+                List<HashMap<String, String>> lastPath = paths.get(lastPathIndex);
+                int lastPointIndex = lastPath.size() - 1;
+                HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
+                LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
+                        Double.parseDouble(lastPointHashMap.get("lon")));
+
+                setLastLocation(lastLatLng);
+            } else {
+                mDestination = mOrigin;
+                setLastLocation(mDestination);
             }
-
-            //get last position latlng
-            int lastPathIndex = paths.size() - 1;
-            List<HashMap<String, String>> lastPath = paths.get(lastPathIndex);
-            int lastPointIndex = lastPath.size() - 1;
-            HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
-            LatLng lastLatLng = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
-                    Double.parseDouble(lastPointHashMap.get("lon")));
-
-            setLastLocation(lastLatLng);
 
             //update receivers
             updateListeners();
