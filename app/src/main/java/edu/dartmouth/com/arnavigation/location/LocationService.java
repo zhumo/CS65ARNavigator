@@ -1,4 +1,4 @@
-package edu.dartmouth.com.arnavigation;
+package edu.dartmouth.com.arnavigation.location;
 
 import android.app.NotificationManager;
 import android.app.Service;
@@ -15,17 +15,21 @@ import android.util.Log;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.model.LatLng;
 
+import edu.dartmouth.com.arnavigation.permissions.PermissionManager;
 
-public class UpdateService extends Service implements GoogleApiClient.ConnectionCallbacks,
+
+public class LocationService extends Service implements GoogleApiClient.ConnectionCallbacks,
         GoogleApiClient.OnConnectionFailedListener,
         com.google.android.gms.location.LocationListener {
 
-    final static String ACTION = "UpdateServiceAction";
+    final public static String UPDATE_LOCATION_ACTION = "UpdateLocationAction";
+    final public static String LATITUDE_KEY = "LATITUDE";
+    final public static String LONGITUDE_KEY = "LONGITUDE";
+
     final static String STOP_SERVICE_BROADCAST_KEY="StopServiceBroadcastKey";
     final static int REQUEST_STOP_SERVICE = 1;
 
@@ -42,7 +46,7 @@ public class UpdateService extends Service implements GoogleApiClient.Connection
 
     private LatLng lastLatLng;
 
-    public UpdateService() {
+    public LocationService() {
     }
 
     @Override
@@ -90,23 +94,20 @@ public class UpdateService extends Service implements GoogleApiClient.Connection
 
     //public binder class
     public class UpdateBinder extends Binder {
-        public UpdateService getService() {
-            return UpdateService.this;
+        public LocationService getService() {
+            return LocationService.this;
         }
     }
 
     @Override
     public void onConnected(@Nullable Bundle bundle) {
-
         Log.d("API_CONNECT", "Connected to google api");
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(updateInterval);
 
-        //make sure permission is granted
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
-        }
+        // Service doesn't get started unless permission is granted.
+        LocationServices.FusedLocationApi.requestLocationUpdates(googleApiClient, locationRequest, this);
     }
 
     @Override
@@ -122,6 +123,7 @@ public class UpdateService extends Service implements GoogleApiClient.Connection
 
     @Override
     public void onLocationChanged(Location location) {
+        Log.d("mztag", "onLocationChanged");
         processLocation(location);
     }
 
@@ -138,9 +140,9 @@ public class UpdateService extends Service implements GoogleApiClient.Connection
             //create update intent
             //send data to activity
             Intent local = new Intent();
-            local.putExtra("EXTRA_LATITUDE", lat);
-            local.putExtra("EXTRA_LONGITUDE", lon);
-            local.setAction("location.update");
+            local.putExtra(LATITUDE_KEY, lat);
+            local.putExtra(LONGITUDE_KEY, lon);
+            local.setAction(UPDATE_LOCATION_ACTION);
             this.sendBroadcast(local);
         }
     }
