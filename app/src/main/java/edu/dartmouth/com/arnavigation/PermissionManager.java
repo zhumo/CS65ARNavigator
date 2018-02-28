@@ -20,7 +20,7 @@ import java.util.List;
 public class PermissionManager {
 
     public static void ensurePermissions(Activity originatingActivity, int requestCode, @Nullable OnHasPermission listener, String... permissions) {
-        List<String> ungrantedPermissions = new ArrayList<>();
+        ArrayList<String> ungrantedPermissions = new ArrayList<>();
 
         for(String permission : permissions) {
             if(!hasPermission(originatingActivity, permission)) { ungrantedPermissions.add(permission); }
@@ -32,8 +32,7 @@ public class PermissionManager {
             }
         } else {
             Intent permissionsActivityIntent = new Intent(originatingActivity, PermissionsActivity.class);
-            String[] permissionsToBeRequested = (String[]) ungrantedPermissions.toArray();
-            permissionsActivityIntent.putExtra(PermissionsActivity.PERMISSION_KEY, permissionsToBeRequested);
+            permissionsActivityIntent.putExtra(PermissionsActivity.PERMISSION_KEY, ungrantedPermissions);
 
             originatingActivity.startActivityForResult(permissionsActivityIntent, requestCode);
         }
