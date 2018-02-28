@@ -79,18 +79,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        PermissionManager.ensurePermission(
-                Manifest.permission.ACCESS_FINE_LOCATION,
-                getActivity(),
-                LOCATION_PERMISSION_REQUEST_CODE,
-                new PermissionManager.OnHasPermission() {
-                    @Override
-                    public void onHasPermission() {
-                        setupMap();
-                    }
-                }
-        );
     }
     
     private void setupMap() {

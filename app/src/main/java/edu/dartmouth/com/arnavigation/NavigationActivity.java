@@ -1,5 +1,6 @@
 package edu.dartmouth.com.arnavigation;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
@@ -23,9 +24,6 @@ import edu.dartmouth.com.arnavigation.views.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.views.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
-    private static int LOCATION_PERMISSION_REQUEST_CODE = 0;
-    private static int CAMERA_PERMISSION_REQUEST_CODE = 1;
-
     private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
 
     private EditText mLocationSearchText;
@@ -39,6 +37,21 @@ public class NavigationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
 
+        PermissionManager.ensurePermissions(
+            this,
+            0,
+            new PermissionManager.OnHasPermission() {
+                @Override
+                public void onHasPermission() {
+                    setupViewPager();
+                }
+            },
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.CAMERA
+        );
+    }
+
+    private void setupViewPager() {
         NonSwipingViewPager viewPager = findViewById(R.id.navigation_view_pager);
 
         final ArrayList<Fragment> fragments = new ArrayList<>();
@@ -109,7 +122,7 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if(resultCode == Activity.RESULT_OK) { /* NOOP */ }
+        if(resultCode == Activity.RESULT_OK) { setupViewPager(); }
         else { finish(); }
     }
 }

@@ -167,25 +167,13 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     public void onResume() {
         super.onResume();
 
-        // ARCore requires camera permissions to operate. If we did not yet obtain runtime
-        // permission on Android M and above, now is a good time to ask the user for it.
-        PermissionManager.ensurePermission(
-            Manifest.permission.CAMERA,
-            getActivity(),
-            CAMERA_PERMISSION_REQUEST_CODE,
-            new PermissionManager.OnHasPermission() {
-                @Override
-                public void onHasPermission() {
-                    if (mSession != null) {
-                        showLoadingMessage();
-                        // Note that order matters - see the note in onPause(), the reverse applies here.
-                        mSession.resume();
-                    }
-                    mSurfaceView.onResume();
-                    mDisplayRotationHelper.onResume();
-                }
-            }
-        );
+        if (mSession != null) {
+            showLoadingMessage();
+            // Note that order matters - see the note in onPause(), the reverse applies here.
+            mSession.resume();
+        }
+        mSurfaceView.onResume();
+        mDisplayRotationHelper.onResume();
     }
 
     @Override
