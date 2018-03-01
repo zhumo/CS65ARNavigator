@@ -82,6 +82,10 @@ public class NavigationActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
                 }
+
+                // Re-enable search button now that results have come back.
+                Button searchButton = findViewById(R.id.searchButton);
+                searchButton.setEnabled(true);
             }
         };
 
