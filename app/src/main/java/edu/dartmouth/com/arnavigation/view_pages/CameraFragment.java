@@ -30,6 +30,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
@@ -390,24 +391,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     }
 
     private void showLoadingMessage() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                showSnackbarMessage("Searching for surfaces...", false);
-            }
-        });
+        /* NOOP */
     }
 
     private void hideLoadingMessage() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mMessageSnackbar != null) {
-                    mMessageSnackbar.dismiss();
-                }
-                mMessageSnackbar = null;
-            }
-        });
+        /* NOOP */
     }
 
     public void reset() {
