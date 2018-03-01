@@ -87,6 +87,10 @@ public class NavigationActivity extends AppCompatActivity {
             }
         };
 
+        IntentFilter newDirectionsIntentFilter = new IntentFilter();
+        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
+        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
+
         PermissionManager.ensurePermissions(
             this,
             0,
@@ -102,10 +106,6 @@ public class NavigationActivity extends AppCompatActivity {
     private void initialize() {
         // Set up directions manager with listener.
         directionsManager = new DirectionsManager(NavigationActivity.this);
-
-        IntentFilter newDirectionsIntentFilter = new IntentFilter();
-        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
-        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
         // Get last known location and initialize map fragment with that info
         Criteria locationProviderCriteria = new Criteria();
