@@ -30,10 +30,6 @@ import javax.net.ssl.HttpsURLConnection;
  */
 
 public class DirectionsManager {
-    //for polyline
-    private PolylineOptions polylineOptions;
-    private static final float POLYLINE_WIDTH = 15;
-
     //for URL request
     private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
@@ -42,12 +38,13 @@ public class DirectionsManager {
     private static final String HTTP_URL = "https://maps.googleapis.com/maps/api/directions/";
     private static final String OUTPUT_TYPE = "json";
 
-    public static String NEW_DIRECTIONS_ACTION = "directions.new";
-    public static String DIRECTIONS_JSON_KEY = "DirectionsJSON";
+    public static String DIRECTIONS_RESULTS_ACTION = "directions.results";
+    public static String DIRECTIONS_RESULTS_SUCCESS_KEY = "directionsResultsSuccess";
 
-    Context mContext;
+    private Context mContext;
 
-    List<List<HashMap<String, String>>> paths;
+    private List<List<HashMap<String, String>>> paths;
+    private String overviewPoly;
 
     //use this constructor for broadcasting
 
@@ -73,7 +70,6 @@ public class DirectionsManager {
         //start directions task
         startDirectionsWithURL(urlRequest);
     }
-
 
     public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode){
         //for now assume travel mode is walking
@@ -134,8 +130,6 @@ public class DirectionsManager {
         return responseString;
     }
 
-
-
     private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
     }
@@ -144,50 +138,56 @@ public class DirectionsManager {
     // ********** ASYNC TASKS *********** //
 
     //async task to get direction
-    private class RequestDirectionsTask extends AsyncTask<String, Void, String> {
+    private class RequestDirectionsTask extends AsyncTask<String, Void, JSONObject> {
         @Override
-        protected String doInBackground(String... strings) {
-            String responseString = "";
-
+        protected JSONObject doInBackground(String... strings) {
+            String responseString = requestDirectionsWithURL(strings[0]);
+            JSONObject responseJSON = new JSONObject();
             try {
-                responseString = requestDirectionsWithURL(strings[0]);
-            } catch (Exception e) {
+                responseJSON = new JSONObject(responseString);
+            } catch (JSONException e) {
                 e.printStackTrace();
             }
 
-            Log.d("RESPONSE", responseString);
-
-            return responseString;
+            return responseJSON;
         }
 
         @Override
-        protected void onPostExecute(String result) {
-            new ParseDirectionsTask().execute(result);
+        protected void onPostExecute(JSONObject responseJSON) {
+            String responseStatus;
+            try {
+                responseStatus = responseJSON.getString("status");
+            } catch (JSONException e) {
+                responseStatus = "JSON_OBJECT_ERROR";
+                e.printStackTrace();
+            }
+
+            if(responseStatus.equals("OK")) {
+                try {
+                    overviewPoly = responseJSON.getJSONObject("overview_polyline").getString("points");
+                } catch (JSONException e) { e.printStackTrace(); }
+
+                new ParseDirectionsTask().execute(responseJSON);
+            } else {
+                Intent intent = new Intent();
+                intent.setAction(DIRECTIONS_RESULTS_ACTION);
+                intent.putExtra(DIRECTIONS_RESULTS_SUCCESS_KEY, false);
+                mContext.sendBroadcast(intent);
+            }
         }
 
         //async task to parse JSON response from request
-        private class ParseDirectionsTask extends AsyncTask<String, Void, List<List<HashMap<String, String>>>> {
+        class ParseDirectionsTask extends AsyncTask<JSONObject, Void, List<List<HashMap<String, String>>>> {
             @Override
-            protected List<List<HashMap<String, String>>> doInBackground(String... strings) {
-
-                JSONObject jsonObject = null;
-
+            protected List<List<HashMap<String, String>>> doInBackground(JSONObject... responseJSONs) {
                 List<List<HashMap<String, String>>> routes = null;
 
                 //use DirectionsParser class to parse JSONObject
                 try {
-                    jsonObject = new JSONObject(strings[0]);
                     DirectionsParser directionsParser = new DirectionsParser();
-                    routes = directionsParser.parse(jsonObject);
-
-                    String encodedPoly = jsonObject.getJSONObject("overview_polyline").getString("points");
-
+                    routes = directionsParser.parse(responseJSONs[0].getJSONArray("routes"));
                 } catch (JSONException je) {
                     je.printStackTrace();
-                }
-
-                if (paths != null) {
-                    setPaths(paths);
                 }
 
                 return routes;
@@ -195,8 +195,11 @@ public class DirectionsManager {
 
             @Override
             protected void onPostExecute(List<List<HashMap<String, String>>> paths) {
+                setPaths(paths);
+
                 Intent intent = new Intent();
-                intent.setAction(NEW_DIRECTIONS_ACTION);
+                intent.setAction(DIRECTIONS_RESULTS_ACTION);
+                intent.putExtra(DIRECTIONS_RESULTS_SUCCESS_KEY, true);
                 mContext.sendBroadcast(intent);
             }
         }

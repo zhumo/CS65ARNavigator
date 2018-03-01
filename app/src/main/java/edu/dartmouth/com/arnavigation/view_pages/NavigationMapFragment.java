@@ -135,7 +135,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     public void setUserLocation(LatLng newLocation) { mUserLatLng = newLocation; }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
-
         if (path.size() > 0) {
 
             //get last position latlng
@@ -170,12 +169,10 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         zoomToUser();
     }
 
-
     //async task to parse JSON response from request
     private class ParseMapDirectionsTask extends AsyncTask<List<List<HashMap<String, String>>>, Void, String> {
         @Override
         protected String doInBackground(List<List<HashMap<String, String>>> ... paths) {
-
             //draw paths
             ArrayList waypoints = null;
 
@@ -206,7 +203,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         @Override
         protected void onPostExecute(String result){
-
             if (polylineOptions != null) {
                 mMap.clear();
                 mMap.addPolyline(polylineOptions);
