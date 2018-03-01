@@ -11,14 +11,15 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -35,10 +36,7 @@ import edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
-    private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
-
     private EditText mLocationSearchText;
-    private Spinner travelSpinner;
 
     private DirectionsManager directionsManager;
 
@@ -206,8 +204,24 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void switchViewsButtonClicked(View view) {
-        int nextViewPageIndex = (viewPager.getCurrentItem() + 1) % 2;
-        viewPager.setCurrentItem(nextViewPageIndex,true);
+        FloatingActionButton clickedButton = (FloatingActionButton) view;
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) clickedButton.getLayoutParams();
+
+        if(viewPager.getCurrentItem() == 0) {
+            // Camera Fragment -> Map Fragment
+            viewPager.setCurrentItem(1,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, RelativeLayout.TRUE);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_camera);
+        } else {
+            // Map Fragment -> Camera Fragment
+            viewPager.setCurrentItem(0,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, 0);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_mapmode);
+        }
+
+        clickedButton.setLayoutParams(layoutParams);
     }
 
     @Override
