@@ -61,12 +61,6 @@ public class NavigationActivity extends AppCompatActivity {
         // get destination input
         mLocationSearchText = findViewById(R.id.locationSearchText);
 
-        // get and set travel spinner
-        travelSpinner = findViewById(R.id.travelSpinner);
-        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
-        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
-        travelSpinner.setAdapter(travelAdapter);
-
         updateLocationReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -190,7 +184,7 @@ public class NavigationActivity extends AppCompatActivity {
         String address = mLocationSearchText.getText().toString();
 
         //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(currentLatLng, address, travelSpinner.getSelectedItemPosition());
+        directionsManager.getDirectionsWithAddress(currentLatLng, address);
     }
 
     public void resetButtonClicked(View v) {
@@ -199,7 +193,6 @@ public class NavigationActivity extends AppCompatActivity {
 
         EditText destinationInput = findViewById(R.id.locationSearchText);
         destinationInput.setText("");
-        travelSpinner.setSelection(0);
 
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);

@@ -31,7 +31,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class DirectionsManager {
     //for URL request
-    private static final String[] TRAVEL_MODES = {"mode_walking", "mode_driving"};
+    private static final String TRAVEL_MODE_WALKING = "mode_walking";
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
 
     private static final String HTTPS_URL = "https://maps.googleapis.com/maps/api/directions/";
@@ -60,11 +60,11 @@ public class DirectionsManager {
         return paths;
     }
 
-    public void getDirectionsWithAddress(LatLng originLatLng, String address, int travelMode) {
+    public void getDirectionsWithAddress(LatLng originLatLng, String address) {
         //create URL request string using address
         String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
         String destination = "destination=" + address;
-        String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
+        String param = origin + "&" + destination + "&" + TRAVEL_MODE_WALKING;
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
 
         //start directions task
@@ -78,7 +78,7 @@ public class DirectionsManager {
         //create URL request string using LatLng
         String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
         String destination = "destination=" + destinationLatLng.latitude + "," + destinationLatLng.longitude;
-        String param = origin + "&" + destination + "&" + TRAVEL_MODES[travelMode];
+        String param = origin + "&" + destination + "&" + TRAVEL_MODE_WALKING;
         String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
 
         //start directions task
