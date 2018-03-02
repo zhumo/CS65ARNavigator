@@ -16,6 +16,9 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.app.Activity;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
@@ -24,12 +27,14 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
@@ -76,7 +81,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 
     private Session mSession;
     private GestureDetector mGestureDetector;
-    private Snackbar mMessageSnackbar;
     private DisplayRotationHelper mDisplayRotationHelper;
 
     private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
@@ -135,7 +139,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
 
         if (message != null) {
-            showSnackbarMessage(message, true);
+            showARErrorMessage(message);
             Log.e(TAG, "Exception creating session", exception);
             return;
         }
@@ -143,9 +147,12 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         // Create default config and check if supported.
         Config config = new Config(mSession);
         if (!mSession.isSupported(config)) {
-            showSnackbarMessage("This device does not support AR", true);
+            showARErrorMessage("This device does not support AR");
+            return;
         }
         mSession.configure(config);
+
+
     }
 
     @Nullable
@@ -176,7 +183,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         super.onResume();
 
         if (mSession != null) {
-            showLoadingMessage();
+            Toast.makeText(getContext(), "Loading...", Toast.LENGTH_SHORT).show();
             // Note that order matters - see the note in onPause(), the reverse applies here.
             mSession.resume();
         }
@@ -323,17 +330,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             // using it.
             pointCloud.release();
 
-            // Check if we detected at least one plane. If so, hide the loading message.
-            if (mMessageSnackbar != null) {
-                for (Plane plane : mSession.getAllTrackables(Plane.class)) {
-                    if (plane.getType() == Plane.Type.HORIZONTAL_UPWARD_FACING
-                            && plane.getTrackingState() == TrackingState.TRACKING) {
-                        hideLoadingMessage();
-                        break;
-                    }
-                }
-            }
-
             // Visualize planes.
             mPlaneRenderer.drawPlanes(
                     mSession.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
@@ -361,38 +357,17 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
     }
 
-    private void showSnackbarMessage(String message, boolean finishOnDismiss) {
-        mMessageSnackbar = Snackbar.make(
-                getView(),
-                message, Snackbar.LENGTH_INDEFINITE);
-        mMessageSnackbar.getView().setBackgroundColor(0xbf323232);
-        if (finishOnDismiss) {
-            mMessageSnackbar.setAction(
-                    "Dismiss",
-                    new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            mMessageSnackbar.dismiss();
-                        }
-                    });
-            mMessageSnackbar.addCallback(
-                    new BaseTransientBottomBar.BaseCallback<Snackbar>() {
-                        @Override
-                        public void onDismissed(Snackbar transientBottomBar, int event) {
-                            super.onDismissed(transientBottomBar, event);
-                            getActivity().finish();
-                        }
-                    });
-        }
-        mMessageSnackbar.show();
-    }
-
-    private void showLoadingMessage() {
-        /* NOOP */
-    }
-
-    private void hideLoadingMessage() {
-        /* NOOP */
+    private void showARErrorMessage(String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Error");
+        builder.setMessage(message);
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                getActivity().finish();
+            }
+        });
+        builder.show();
     }
 
     public void reset() {
