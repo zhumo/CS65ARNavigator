@@ -41,6 +41,8 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
     private long updateInterval = 1000; //1 sec
 
+    private Binder binder = new Binder();
+
     @Override
     public void onCreate(){
         super.onCreate();
@@ -58,13 +60,15 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
-        return null;
-    }
+    public IBinder onBind(Intent intent) { return binder; }
 
     @Override
     public boolean onUnbind(Intent intent) {
         return super.onUnbind(intent);
+    }
+
+    public class Binder extends android.os.Binder {
+        public LatLng currentLatLng;
     }
 
     @Override
@@ -94,18 +98,10 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
         Log.d("API_FAIL", "Connection failed");
     }
 
-
     @Override
     public void onLocationChanged(Location location) {
         double lat = location.getLatitude();
         double lon = location.getLongitude();
-
-        //create update intent
-        //send data to activity
-        Intent local = new Intent();
-        local.putExtra(LATITUDE_KEY, lat);
-        local.putExtra(LONGITUDE_KEY, lon);
-        local.setAction(UPDATE_LOCATION_ACTION);
-        sendBroadcast(local);
+        binder.currentLatLng = new LatLng(lat, lon);
     }
 }
