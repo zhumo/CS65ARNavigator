@@ -11,14 +11,15 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -35,10 +36,7 @@ import edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
-    private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
-
     private EditText mLocationSearchText;
-    private Spinner travelSpinner;
 
     private DirectionsManager directionsManager;
 
@@ -61,12 +59,6 @@ public class NavigationActivity extends AppCompatActivity {
         // get destination input
         mLocationSearchText = findViewById(R.id.locationSearchText);
 
-        // get and set travel spinner
-        travelSpinner = findViewById(R.id.travelSpinner);
-        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
-        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
-        travelSpinner.setAdapter(travelAdapter);
-
         updateLocationReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -88,8 +80,16 @@ public class NavigationActivity extends AppCompatActivity {
                 } else {
                     Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
                 }
+
+                // Re-enable search button now that results have come back.
+                Button searchButton = findViewById(R.id.searchButton);
+                searchButton.setEnabled(true);
             }
         };
+
+        IntentFilter newDirectionsIntentFilter = new IntentFilter();
+        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
+        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
         PermissionManager.ensurePermissions(
             this,
@@ -106,10 +106,6 @@ public class NavigationActivity extends AppCompatActivity {
     private void initialize() {
         // Set up directions manager with listener.
         directionsManager = new DirectionsManager(NavigationActivity.this);
-
-        IntentFilter newDirectionsIntentFilter = new IntentFilter();
-        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
-        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
         // Get last known location and initialize map fragment with that info
         Criteria locationProviderCriteria = new Criteria();
@@ -190,7 +186,7 @@ public class NavigationActivity extends AppCompatActivity {
         String address = mLocationSearchText.getText().toString();
 
         //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(currentLatLng, address, travelSpinner.getSelectedItemPosition());
+        directionsManager.getDirectionsWithAddress(currentLatLng, address);
     }
 
     public void resetButtonClicked(View v) {
@@ -199,7 +195,6 @@ public class NavigationActivity extends AppCompatActivity {
 
         EditText destinationInput = findViewById(R.id.locationSearchText);
         destinationInput.setText("");
-        travelSpinner.setSelection(0);
 
         InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
@@ -209,8 +204,24 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void switchViewsButtonClicked(View view) {
-        int nextViewPageIndex = (viewPager.getCurrentItem() + 1) % 2;
-        viewPager.setCurrentItem(nextViewPageIndex,true);
+        FloatingActionButton clickedButton = (FloatingActionButton) view;
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) clickedButton.getLayoutParams();
+
+        if(viewPager.getCurrentItem() == 0) {
+            // Camera Fragment -> Map Fragment
+            viewPager.setCurrentItem(1,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, RelativeLayout.TRUE);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_camera);
+        } else {
+            // Map Fragment -> Camera Fragment
+            viewPager.setCurrentItem(0,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, 0);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_mapmode);
+        }
+
+        clickedButton.setLayoutParams(layoutParams);
     }
 
     @Override

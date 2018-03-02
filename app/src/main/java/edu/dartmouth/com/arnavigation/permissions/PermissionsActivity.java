@@ -31,7 +31,11 @@ public class PermissionsActivity extends Activity {
         super.onCreate(savedInstanceState);
 
         requestedPermissions = getIntent().getExtras().getStringArrayList(PERMISSION_KEY);
-        requirePermissions(requestedPermissions, 0);
+        if(requestedPermissions.size() > 0) {
+            requirePermissions(requestedPermissions, 0);
+        } else {
+            finish();
+        }
     }
 
     private void requirePermissions(ArrayList<String> requiredPermissions, int requestCode) {

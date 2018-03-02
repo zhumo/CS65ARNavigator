@@ -13,6 +13,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewManager;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -34,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.directions.DirectionsParser;
 
 public class NavigationMapFragment extends SupportMapFragment implements OnMapReadyCallback {
@@ -58,6 +64,16 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         WIDTH_PIXELS = displayMetrics.widthPixels;
 
         getMapAsync(this);
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater layoutInflater, ViewGroup viewGroup, Bundle bundle) {
+        View mapFragment = super.onCreateView(layoutInflater, viewGroup, bundle);
+
+        View locationButton = ((View) mapFragment.findViewById(1).getParent()).findViewById(2);
+        ((ViewManager) locationButton.getParent()).removeView(locationButton);
+
+        return mapFragment;
     }
 
     @Override
@@ -136,7 +152,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
         if (path.size() > 0) {
-
             //get last position latlng
             int lastPathIndex = path.size() - 1;
             List<HashMap<String, String>> lastPath = path.get(lastPathIndex);

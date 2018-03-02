@@ -30,6 +30,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
@@ -198,16 +199,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     @Override
     public void setUserVisibleHint(boolean isVisibleToUser) {
         super.setUserVisibleHint(isVisibleToUser);
+        if(mSurfaceView == null) { return; }
+
         if (isVisibleToUser) {
-//            // Standard Android full-screen functionality.
-//            getActivity().getWindow().getDecorView().setSystemUiVisibility(
-//                    View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-//                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
-//                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-//                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-//                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-//                            | View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
-//            getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            mSurfaceView.onResume();
+        } else {
+            mSurfaceView.onPause();
         }
     }
 
@@ -390,24 +387,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     }
 
     private void showLoadingMessage() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                showSnackbarMessage("Searching for surfaces...", false);
-            }
-        });
+        /* NOOP */
     }
 
     private void hideLoadingMessage() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                if (mMessageSnackbar != null) {
-                    mMessageSnackbar.dismiss();
-                }
-                mMessageSnackbar = null;
-            }
-        });
+        /* NOOP */
     }
 
     public void reset() {

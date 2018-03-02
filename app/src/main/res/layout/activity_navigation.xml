@@ -5,64 +5,46 @@
     android:layout_height="match_parent"
     tools:context="edu.dartmouth.com.arnavigation.NavigationActivity">
 
-    <LinearLayout
-        android:id="@+id/toolbar"
+    <edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager
+        android:id="@+id/navigation_view_pager"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:layout_alignParentTop="true"
-        android:orientation="vertical">
+        android:layout_height="match_parent" />
 
-        <LinearLayout
+    <LinearLayout
+        android:id="@+id/destination_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:layout_marginTop="@dimen/button_margins"
+        android:layout_marginStart="@dimen/button_margins"
+        android:layout_marginEnd="@dimen/button_margins"
+        android:orientation="horizontal">
+
+        <EditText
+            android:id="@+id/locationSearchText"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:hint="Destination"
+            android:inputType="textPostalAddress" />
 
-            <LinearLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                android:layout_weight="9">
-                <EditText
-                    android:id="@+id/locationSearchText"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:hint="Destination"
-                    android:inputType="textPostalAddress" />
-                <Spinner
-                    android:id="@+id/travelSpinner"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content" />
-            </LinearLayout>
-
-            <Button
-                android:id="@+id/searchButton"
-                android:layout_weight="1"
-                android:layout_width="wrap_content"
-                android:layout_height="match_parent"
-                android:onClick="locationSearchPressed"
-                android:text="Go" />
-        </LinearLayout>
-
-        <RelativeLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1">
-            <Button
-                android:id="@+id/reset_map_button"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentTop="true"
-                android:layout_alignParentStart="true"
-                android:onClick="resetButtonClicked"
-                android:text="reset"/>
-
-            <edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager
-                android:id="@+id/navigation_view_pager"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                />
-        </RelativeLayout>
+        <Button
+            android:id="@+id/searchButton"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:onClick="locationSearchPressed"
+            android:text="Go" />
     </LinearLayout>
+
+    <Button
+        android:id="@+id/reset_map_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/button_margins"
+        android:layout_below="@id/destination_search"
+        android:layout_alignParentStart="true"
+        android:onClick="resetButtonClicked"
+        android:text="reset"/>
 
     <android.support.design.widget.FloatingActionButton
         android:id="@+id/fab"
@@ -70,8 +52,8 @@
         android:layout_height="wrap_content"
         android:layout_alignParentBottom="true"
         android:layout_alignParentEnd="true"
-        android:src="@android:drawable/ic_menu_camera"
+        android:src="@android:drawable/ic_menu_mapmode"
         android:scaleType="center"
-        android:onClick="switchViewsButtonClicked"
-        android:layout_margin="@dimen/fab_margin" />
+        android:layout_margin="@dimen/button_margins"
+        android:onClick="switchViewsButtonClicked" />
 </RelativeLayout>
