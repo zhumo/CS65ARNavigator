@@ -81,23 +81,13 @@ public class NavigationActivity extends AppCompatActivity {
         newDirectionsReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
-                Log.d("mztag", rawDirectionsJSON);
-
-                navigationMapFragment.createNewDirections(directionsManager.getPaths());
-                cameraFragment.createNewDirections(directionsManager.getPaths());
-
-//                try {
-//                    JSONObject directionsJSON = new JSONObject(rawDirectionsJSON);
-//                    if (directionsJSON.get("status").equals("OK")){
-//                        navigationMapFragment.new
-//                    } else {
-//                        Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
-//                    }
-//                } catch (JSONException e) {
-//                    e.printStackTrace();
-//                    Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
-//                }
+                boolean directionsResultSuccess = intent.getExtras().getBoolean(DirectionsManager.DIRECTIONS_RESULTS_SUCCESS_KEY);
+                if (directionsResultSuccess) {
+                    navigationMapFragment.createNewDirections(directionsManager.getPaths());
+                    cameraFragment.createNewDirections(directionsManager.getPaths());
+                } else {
+                    Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
+                }
             }
         };
 
@@ -116,13 +106,10 @@ public class NavigationActivity extends AppCompatActivity {
     private void initialize() {
         // Set up directions manager with listener.
         directionsManager = new DirectionsManager(NavigationActivity.this);
-        IntentFilter newDirectionsIntentFilter = new IntentFilter();
-        newDirectionsIntentFilter.addAction(DirectionsManager.NEW_DIRECTIONS_ACTION);
-        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
-        // Start location service
-        Intent startLocationServiceIntent = new Intent(NavigationActivity.this, LocationService.class);
-        startService(startLocationServiceIntent);
+        IntentFilter newDirectionsIntentFilter = new IntentFilter();
+        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
+        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
         // Get last known location and initialize map fragment with that info
         Criteria locationProviderCriteria = new Criteria();
@@ -153,6 +140,10 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        // Start location service
+        Intent startLocationServiceIntent = new Intent(this, LocationService.class);
+        startService(startLocationServiceIntent);
+
         IntentFilter updateLocationIntentFilter = new IntentFilter();
         updateLocationIntentFilter.addAction(LocationService.UPDATE_LOCATION_ACTION);
         registerReceiver(updateLocationReceiver, updateLocationIntentFilter);
@@ -162,6 +153,7 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
 
+        stopService(new Intent(this, LocationService.class));
         unregisterReceiver(updateLocationReceiver);
     }
 

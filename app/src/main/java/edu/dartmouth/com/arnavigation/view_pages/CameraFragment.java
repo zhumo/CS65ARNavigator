@@ -415,9 +415,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
-
         if (path.size() > 0) {
-
             //get last position latlng
             int lastPathIndex = path.size() - 1;
             List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
@@ -425,10 +423,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
             HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
             mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
                     Double.parseDouble(lastPointHashMap.get("lon")));
-
-
-            //run polyline task
-            new NavigationMapFragment.ParseMapDirectionsTask().execute(path);
         }
         else {
             mDestination = mUserLatLng;
