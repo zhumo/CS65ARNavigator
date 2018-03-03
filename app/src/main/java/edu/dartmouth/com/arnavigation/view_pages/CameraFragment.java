@@ -125,6 +125,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     private Line lineRenderer = new Line();
     private Triangle triangle = new Triangle();
 
+    private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
+
 
 
     @Override
@@ -368,6 +370,14 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
+            if (isLineCreated == true){
+                //add anchor
+                mAnchors.add(mSession.createAnchor(
+                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+
+                isLineCreated = false; //set false so only one anchor at a time
+            }
+
 
 
 //            Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -5, 0f, 0f, 0f, 0f, 1.0f, 0f );
@@ -572,8 +582,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
                 lineRenderer.printLine();
 
-                mAnchors.add(mSession.createAnchor(
-                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+
 
 
 //                    LatLng[] legArray = new LatLng[2];
@@ -631,7 +640,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
         @Override
         protected void onPostExecute(String result){
-
+            isLineCreated = true;
         }
     }
 

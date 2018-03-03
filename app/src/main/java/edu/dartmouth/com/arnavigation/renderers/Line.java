@@ -299,11 +299,10 @@ public class Line {
 
 
         // Draw the lines
-        GLES20.glDrawArrays(GLES20.GL_LINE_STRIP, 0, vertexCount);
-        GLES20.glLineWidth(5.0f);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, indexBufferId);
         GLES20.glDrawElements(GLES20.GL_LINES, indexCount, GLES20.GL_UNSIGNED_SHORT, 0);
         GLES20.glBindBuffer(GLES20.GL_ELEMENT_ARRAY_BUFFER, 0);
+        GLES20.glLineWidth(5.0f);
 
 
         // Disable vertex array
