@@ -156,8 +156,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             return;
         }
         mSession.configure(config);
-
-        if (mUserLatLng != null) { getNearbyPlaces(); }
     }
 
     @Nullable
@@ -222,11 +220,13 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     }
 
     private void getNearbyPlaces() {
-        Log.d("mztag", "triggered!");
         new GetNearbyPlacesRequest(new GetNearbyPlacesRequest.OnPostExecute() {
             @Override
             public void onPostExecute(JSONObject responseJSON) {
                 try {
+                    // Use these to debug the HTTP requests
+                    // Log.d("mztag", "Status: " + responseJSON.getString("status"));
+                    // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
                     if (responseJSON.getString("status").equals("OK")) {
                         JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
                         for (int i = 0; i < nearbyPlacesJSON.length(); i++) {

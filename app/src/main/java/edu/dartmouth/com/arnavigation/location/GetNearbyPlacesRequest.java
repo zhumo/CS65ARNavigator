@@ -3,6 +3,7 @@ package edu.dartmouth.com.arnavigation.location;
 import android.app.Activity;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 
@@ -19,7 +20,7 @@ import javax.net.ssl.HttpsURLConnection;
 
 public class GetNearbyPlacesRequest extends AsyncTask<LatLng, Void, JSONObject> {
     private static String NEARBY_PLACES_AUTHORITY = "maps.googleapis.com";
-    private static String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
+    private static String API_KEY = "AIzaSyDtlvUxYCusIgmEU6ACg6Wm5KEu-5UM3aM";
     private OnPostExecute listener;
 
     public GetNearbyPlacesRequest(OnPostExecute listener) {
@@ -48,6 +49,7 @@ public class GetNearbyPlacesRequest extends AsyncTask<LatLng, Void, JSONObject> 
                     .appendQueryParameter("location", originLatLng.latitude + "," + originLatLng.longitude)
                     .appendQueryParameter("radius", "1000");
             Uri nearbyPlacesUri = uriBuilder.build();
+//            Log.d("mztag", "Attempting: " + nearbyPlacesUri.toString());
             URL nearbyPlacesURL = new URL(nearbyPlacesUri.toString());
 
             httpsURLConnection = (HttpsURLConnection) nearbyPlacesURL.openConnection();

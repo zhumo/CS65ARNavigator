@@ -82,8 +82,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
-
-        if (mUserLatLng != null) { zoomToUser(); }
     }
 
     private void zoomToUser() { zoomTo(mUserLatLng); }
@@ -147,9 +145,13 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     public void setUserLocation(LatLng newLocation) {
-        if(mUserLatLng == null && mMap != null) {
+        if(mUserLatLng == null) {
+            if (mMap != null) {
+                mUserLatLng = newLocation;
+                zoomToUser();
+            }
+        } else {
             mUserLatLng = newLocation;
-            zoomToUser();
         }
     }
 

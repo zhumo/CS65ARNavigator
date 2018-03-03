@@ -86,7 +86,6 @@ public class DirectionsManager {
     }
 
     private String requestDirectionsWithURL(String reqURL){
-
         //make API call with url
 
         String responseString = "";
