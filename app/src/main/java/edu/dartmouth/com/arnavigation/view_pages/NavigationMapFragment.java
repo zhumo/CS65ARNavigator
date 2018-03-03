@@ -146,7 +146,12 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         return zoom;
     }
 
-    public void setUserLocation(LatLng newLocation) { mUserLatLng = newLocation; }
+    public void setUserLocation(LatLng newLocation) {
+        if(mUserLatLng == null && mMap != null) {
+            mUserLatLng = newLocation;
+            zoomToUser();
+        }
+    }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
         if (path.size() > 0) {

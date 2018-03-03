@@ -3,16 +3,13 @@ package edu.dartmouth.com.arnavigation;
 import android.Manifest;
 import android.app.Activity;
 import android.content.BroadcastReceiver;
-import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.ServiceConnection;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
-import android.os.IBinder;
 import android.support.annotation.Nullable;
 import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
@@ -39,10 +36,12 @@ import edu.dartmouth.com.arnavigation.view_pages.NavigationMapFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 
-public class NavigationActivity extends AppCompatActivity implements ServiceConnection {
+public class NavigationActivity extends AppCompatActivity {
     private EditText mLocationSearchText;
 
     private DirectionsManager directionsManager;
+
+    public LatLng currentLatLng;
 
     NonSwipingViewPager viewPager;
 
@@ -51,7 +50,7 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
 
     BroadcastReceiver newDirectionsReceiver;
 
-    private LatLng currentLatLng;
+    BroadcastReceiver updateLocationReceiver;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -60,6 +59,19 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
 
         // get destination input
         mLocationSearchText = findViewById(R.id.locationSearchText);
+
+        updateLocationReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+            LatLng newLatLng = new LatLng(
+                intent.getExtras().getDouble(LocationService.LATITUDE_KEY),
+                intent.getExtras().getDouble(LocationService.LONGITUDE_KEY)
+            );
+            currentLatLng = newLatLng;
+            navigationMapFragment.setUserLocation(newLatLng);
+            cameraFragment.setUserLocation(newLatLng);
+            }
+        };
 
         newDirectionsReceiver = new BroadcastReceiver() {
             @Override
@@ -114,7 +126,6 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
             navigationMapFragment.setUserLocation(currentLatLng);
             cameraFragment.setUserLocation(currentLatLng);
         }
-
         // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
 
@@ -133,15 +144,18 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
         // Start location service
         Intent startLocationServiceIntent = new Intent(this, LocationService.class);
         startService(startLocationServiceIntent);
-        bindService(startLocationServiceIntent, this, Context.BIND_AUTO_CREATE);
+
+        IntentFilter updateLocationIntentFilter = new IntentFilter();
+        updateLocationIntentFilter.addAction(LocationService.UPDATE_LOCATION_ACTION);
+        registerReceiver(updateLocationReceiver, updateLocationIntentFilter);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
 
-        unbindService(this);
         stopService(new Intent(this, LocationService.class));
+        unregisterReceiver(updateLocationReceiver);
     }
 
     @Override
@@ -155,19 +169,6 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
         }
 
         unregisterReceiver(newDirectionsReceiver);
-    }
-
-    @Override
-    public void onServiceConnected(ComponentName name, IBinder service) {
-        LocationService.Binder binder = (LocationService.Binder) service;
-        currentLatLng = binder.currentLatLng;
-        navigationMapFragment.setUserLocation(binder.currentLatLng);
-        cameraFragment.setUserLocation(binder.currentLatLng);
-    }
-
-    @Override
-    public void onServiceDisconnected(ComponentName name) {
-        /* NOOP */
     }
 
     public void locationSearchPressed(View v) {
