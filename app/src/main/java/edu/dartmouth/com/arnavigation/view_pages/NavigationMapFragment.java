@@ -83,15 +83,15 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
 
-        zoomToUser();
+        if (mUserLatLng != null) { zoomToUser(); }
     }
 
-    private void zoomToUser() {
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLatLng, 17.0f));
+    private void zoomToUser() { zoomTo(mUserLatLng); }
+    private void zoomTo(LatLng zoomToLatLng) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomToLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition) {
-
         mMap.addMarker(new MarkerOptions().position(mUserLatLng).icon(
                 BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
         );
@@ -104,9 +104,7 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     private void setZoom(LatLng position) {
-        if (position != null){
-            setNewBounds(position);
-        }
+        if (position != null){ setNewBounds(position); }
     }
 
     private void setNewBounds(LatLng finalPosition) {
@@ -168,7 +166,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
             mDestination = mUserLatLng;
         }
     }
-
 
     private void addToPolyine(ArrayList<LatLng> waypoints) {
         //add new waypoints to polyline

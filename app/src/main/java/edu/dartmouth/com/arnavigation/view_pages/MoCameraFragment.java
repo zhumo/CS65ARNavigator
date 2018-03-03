@@ -47,6 +47,10 @@ import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,6 +62,7 @@ import javax.microedition.khronos.opengles.GL10;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
 import edu.dartmouth.com.arnavigation.R;
+import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
@@ -148,7 +153,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
         mSession.configure(config);
 
-
+        if (mUserLatLng != null) { getNearbyPlaces(); }
     }
 
     @Nullable
@@ -212,7 +217,45 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
     }
 
-    public void setUserLocation(LatLng newLatLng) { mUserLatLng = newLatLng; }
+    private void getNearbyPlaces() {
+        Log.d("mztag", "triggered!");
+        new GetNearbyPlacesRequest(new GetNearbyPlacesRequest.OnPostExecute() {
+            @Override
+            public void onPostExecute(JSONObject responseJSON) {
+                try {
+                    if (responseJSON.getString("status").equals("OK")) {
+                        JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
+                        for (int i = 0; i < nearbyPlacesJSON.length(); i++) {
+                            JSONObject nearbyPlaceJSON = nearbyPlacesJSON.getJSONObject(i);
+                            Log.d("mztag", "Nearby Place #" + i + ": " + nearbyPlaceJSON.get("name"));
+                        }
+                    } else {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                        builder.setTitle("Error");
+                        builder.setMessage("Could not load nearby places");
+                        builder.setPositiveButton("OK", null);
+                        builder.show();
+                    }
+                } catch (JSONException e) {
+                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                    builder.setTitle("Error");
+                    builder.setMessage("Could not load nearby places");
+                    builder.setPositiveButton("OK", null);
+                    builder.show();
+                    e.printStackTrace();
+                }
+            }
+        }).execute(mUserLatLng);
+    }
+
+    public void setUserLocation(LatLng newLatLng) {
+        if (mUserLatLng == null && newLatLng != null) {
+            mUserLatLng = newLatLng;
+            getNearbyPlaces();
+        } else {
+            mUserLatLng = newLatLng;
+        }
+    }
 
     private void onSingleTap(MotionEvent e) {
         // Queue tap if there is space. Tap is lost if queue is full.

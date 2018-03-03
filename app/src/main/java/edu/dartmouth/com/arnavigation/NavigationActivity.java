@@ -106,12 +106,14 @@ public class NavigationActivity extends AppCompatActivity implements ServiceConn
 
         Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
 
-        currentLatLng = new LatLng(
+        if (lastKnownLocation != null) {
+            currentLatLng = new LatLng(
                 lastKnownLocation.getLatitude(),
                 lastKnownLocation.getLongitude()
-        );
-        navigationMapFragment.setUserLocation(currentLatLng);
-        cameraFragment.setUserLocation(currentLatLng);
+            );
+            navigationMapFragment.setUserLocation(currentLatLng);
+            cameraFragment.setUserLocation(currentLatLng);
+        }
 
         // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
