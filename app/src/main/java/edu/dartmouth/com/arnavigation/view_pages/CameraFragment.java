@@ -18,6 +18,8 @@ package edu.dartmouth.com.arnavigation.view_pages;
 
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -39,22 +41,36 @@ import com.google.ar.core.Frame;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.core.PointCloud;
+import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
 import edu.dartmouth.com.arnavigation.R;
+import edu.dartmouth.com.arnavigation.directions.LegObject;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
+import edu.dartmouth.com.arnavigation.renderers.Line;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
 import edu.dartmouth.com.arnavigation.renderers.PlaneRenderer;
 import edu.dartmouth.com.arnavigation.renderers.PointCloudRenderer;
+import edu.dartmouth.com.arnavigation.renderers.Triangle;
+
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -74,6 +90,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
     private Session mSession;
     private GestureDetector mGestureDetector;
+    private Frame mFrame;
     private Snackbar mMessageSnackbar;
     private DisplayRotationHelper mDisplayRotationHelper;
 
@@ -85,19 +102,36 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private final float[] mAnchorMatrix = new float[16];
+    private final float[] mMVPMatrix = new float[16];
+    private final float[] mProjectionMatrix = new float[16];
+    private final float[] mViewMatrix = new float[16];
 
     // Tap handling and UI.
     private final ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
     private final ArrayList<Anchor> mAnchors = new ArrayList<>();
 
+    private Frame frame;
+    private Camera camera;
+
+    private final float[] PATH_COLOR = new float[]{0.0f, 0.75f, 1.0f, 0.8f}; //a nice blue
+
     //location reference
     private LatLng mUserLatLng;
     private LatLng mDestination;
+
+    //store route as legobjects
+    private ArrayList<LegObject> legs;
+    private ArrayList<Line> lines;
+    private Line lineRenderer = new Line();
+    private Triangle triangle = new Triangle();
+
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
+
         mDisplayRotationHelper = new DisplayRotationHelper(getContext());
 
         // Set up tap listener.
@@ -228,7 +262,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
         // Prepare the other rendering objects.
         try {
-            mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
+            mVirtualObject.createOnGlThread(getContext(), "tinker.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
             mVirtualObjectShadow.createOnGlThread(getContext(),
@@ -244,18 +278,43 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
             Log.e(TAG, "Failed to read plane texture");
         }
         mPointCloud.createOnGlThread(getContext());
+
+        triangle.createOnGLThread(getContext());
+
+        lineRenderer.createOnGLThread(PATH_COLOR, getContext());
+        //lineRenderer = new Line(PATH_COLOR);
+
+        //hardcode for now
+        lineRenderer.setLineVertices(new float[]{
+                0.0f, -1.0f, 0,
+                -1.0f, -0.8f, -2.0f,
+                0.0f, -0.6f, -4.0f,
+                1.0f, -0.4f, -6.0f,
+                0.0f, 0.0f, -10.0f,
+                -4.555f, -19.68561f, -50.0f
+        });
+
     }
 
     @Override
     public void onSurfaceChanged(GL10 gl, int width, int height) {
         mDisplayRotationHelper.onSurfaceChanged(width, height);
         GLES20.glViewport(0, 0, width, height);
+
+        float ratio = (float) width / height;
+
+        // this projection matrix is applied to object coordinates
+        // in the onDrawFrame() method
+        Matrix.frustumM(mProjectionMatrix, 0, -ratio, ratio, -1, 1, 3, 7);
     }
 
     @Override
     public void onDrawFrame(GL10 gl) {
         // Clear screen to notify driver it should not load any pixels from previous frame.
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
+
+
+
 
         if (mSession == null) {
             return;
@@ -264,45 +323,63 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         // the video background can be properly adjusted.
         mDisplayRotationHelper.updateSessionIfNeeded(mSession);
 
+
         try {
             // Obtain the current frame from ARSession. When the configuration is set to
             // UpdateMode.BLOCKING (it is by default), this will throttle the rendering to the
             // camera framerate.
-            Frame frame = mSession.update();
-            Camera camera = frame.getCamera();
+            frame = mSession.update();
+            camera = frame.getCamera();
 
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
-                for (HitResult hit : frame.hitTest(tap)) {
-                    // Check if any plane was hit, and if it was hit inside the plane polygon
-                    Trackable trackable = hit.getTrackable();
-                    if (trackable instanceof Plane
-                            && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
-                        // Cap the number of objects created. This avoids overloading both the
-                        // rendering system and ARCore.
-                        if (mAnchors.size() >= 20) {
-                            mAnchors.get(0).detach();
-                            mAnchors.remove(0);
-                        }
-                        // Adding an Anchor tells ARCore that it should track this position in
-                        // space. This anchor is created on the Plane to place the 3d model
-                        // in the correct position relative both to the world and to the plane.
-                        mAnchors.add(hit.createAnchor());
+//                for (HitResult hit : frame.hitTest(tap)) {
+//                    // Check if any plane was hit, and if it was hit inside the plane polygon
+//                    Trackable trackable = hit.getTrackable();
+//                    if (trackable instanceof Plane
+//                            && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
+//                        // Cap the number of objects created. This avoids overloading both the
+//                        // rendering system and ARCore.
+//                        if (mAnchors.size() >= 20) {
+//                            mAnchors.get(0).detach();
+//                            mAnchors.remove(0);
+//                        }
+//                        // Adding an Anchor tells ARCore that it should track this position in
+//                        // space. This anchor is created on the Plane to place the 3d model
+//                        // in the correct position relative both to the world and to the plane.
+//                        mAnchors.add(hit.createAnchor());
+//
+//                        // Hits are sorted by depth. Consider only closest hit on a plane.
+//                        break;
+//                    }
+//                }
 
-                        // Hits are sorted by depth. Consider only closest hit on a plane.
-                        break;
-                    }
+                if (mAnchors.size() >= 1) {
+                    mAnchors.get(0).detach();
+                    mAnchors.remove(0);
                 }
+                mAnchors.add(mSession.createAnchor(
+                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+                        //frame.getCamera().getPose().compose(Pose.makeRotation(0, 180, 90, 0).extractRotation())));
             }
 
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
+
+
+//            Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -5, 0f, 0f, 0f, 0f, 1.0f, 0f );
+//            Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
+//
+//            if (lineRenderer.getSize() > 0) {
+//                lineRenderer.draw(mMVPMatrix);
+//            }
+
             // If not tracking, don't draw 3d objects.
             if (camera.getTrackingState() == TrackingState.PAUSED) {
-                return;
+                //return;
             }
 
             // Get projection matrix.
@@ -346,22 +423,34 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
                 if (anchor.getTrackingState() != TrackingState.TRACKING) {
                     continue;
                 }
+
+                Log.d("DRAWING_LINE", "Drawing line for anchors");
+
                 // Get the current pose of an Anchor in world space. The Anchor pose is updated
                 // during calls to session.update() as ARCore refines its estimate of the world.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
+                lineRenderer.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
+
+                //triangle.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                //triangle.draw(viewmtx, projmtx, lightIntensity);
+
                 // Update and draw the model and its shadow.
-                mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
-                mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
+                //mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                //mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                //mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
+                //mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
             }
+
+
 
         } catch (Throwable t) {
             // Avoid crashing the application due to unhandled exceptions.
             Log.e(TAG, "Exception on the OpenGL thread", t);
         }
     }
+
 
     private void showSnackbarMessage(String message, boolean finishOnDismiss) {
         mMessageSnackbar = Snackbar.make(
@@ -410,28 +499,157 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         });
     }
 
+    public void setUserLocation(LatLng newLatLng){
+        mUserLatLng = newLatLng;
+    }
+
     public void reset() {
         /* Not implemented. Should remove any path drawings. */
     }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
 
-        if (path.size() > 0) {
+        Log.d("jt", "here " + path);
 
-            //get last position latlng
-            int lastPathIndex = path.size() - 1;
-            List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
-            int lastPointIndex = lastPath.size() - 1;
-            HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
-            mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
-                    Double.parseDouble(lastPointHashMap.get("lon")));
+        if (path != null) {
+
+            if (path.size() > 0) {
+
+                //get last position latlng
+                int lastPathIndex = path.size() - 1;
+                List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
+                int lastPointIndex = lastPath.size() - 1;
+                HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
+                mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
+                        Double.parseDouble(lastPointHashMap.get("lon")));
 
 
-            //run polyline task
-            new NavigationMapFragment.ParseMapDirectionsTask().execute(path);
-        }
-        else {
-            mDestination = mUserLatLng;
+                //try to draw stuff
+                new ParsePathDirectionsTask().execute(path);
+            } else {
+                mDestination = mUserLatLng;
+            }
         }
     }
+
+
+    //async task to parse JSON response from request
+    private class ParsePathDirectionsTask extends AsyncTask<List<List<HashMap<String, String>>>, Void, String> {
+        @Override
+        protected String doInBackground(List<List<HashMap<String, String>>> ... paths) {
+
+            legs = new ArrayList<LegObject>();
+
+            lines = new ArrayList<Line>();
+
+            ArrayList<LatLng> waypoints = new ArrayList<LatLng>();
+
+            if (paths[0].size() > 0) {
+
+                for (List<HashMap<String, String>> path : paths[0]) {
+                    waypoints = new ArrayList<LatLng>();
+
+                    for (HashMap<String, String> point : path) {
+
+                        //get values from json-created hashmap
+                        Double lat = Double.parseDouble(point.get("lat"));
+                        Double lng = Double.parseDouble(point.get("lon"));
+
+                        //add to waypoints
+                        waypoints.add(new LatLng(lat, lng));
+
+                    }
+                }
+
+                LatLng[] waypointsArray = waypoints.toArray(new LatLng[waypoints.size()]);
+
+                LegObject legObject = new LegObject(waypointsArray);
+                //create buffers from current user location
+                legObject.createTranslationBufferRelativeToLatLng(mUserLatLng);
+
+                lineRenderer.setLineVertices(legObject.getVertices());
+                lineRenderer.setLineIndices(legObject.getIndices());
+
+                lineRenderer.printLine();
+
+                mAnchors.add(mSession.createAnchor(
+                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+
+
+//                    LatLng[] legArray = new LatLng[2];
+//                    int legAmount = 4; //should be waypointsArray.length - 1
+//
+//                    for (int i = 0; i < legAmount; i++){
+//                        int j = i + 1;
+//                        legArray[0] = waypointsArray[i];
+//                        legArray[1] = waypointsArray[j];
+//
+//                        final LegObject leg = new LegObject(legArray);
+//                        leg.setLegVerticesFromUserLatLng(mUserLatLng);
+//                        legs.add(leg);
+//
+//                        Line line = new Line(leg.getLegVertices(), PATH_COLOR, getContext());
+//                        lines.add(line);
+//
+//
+//                        float dX = leg.getLegVertices()[0];
+//                        float dZ = leg.getLegVertices()[2];
+//
+//                        mAnchors.add(mSession.createAnchor(
+//                                frame.getCamera().getPose()
+//                                        .compose(Pose.makeTranslation(dX, 0, (float)-1-dZ)
+//                                        .extractTranslation())));
+//
+//                    }
+
+            }
+            else {
+//                try {//read hardcode json for now
+//                    JSONObject obj = new JSONObject(loadJSONFromAsset());
+//                    JSONArray m_jArry = obj.getJSONArray("");
+//                    ArrayList<HashMap<String, String>> latLngList = new ArrayList<HashMap<String, String>>();
+//                    HashMap<String, String> latLngMap;
+//
+//                    for (int i = 0; i < m_jArry.length(); i++) {
+//                        JSONObject jo_inside = m_jArry.getJSONObject(i);
+//                        String lat = jo_inside.getString("Latitude");
+//                        String lon = jo_inside.getString("Longitude");
+//
+//
+////                        //Add your values in your `ArrayList` as below:
+////                        latLngMap = new HashMap<String, String>();
+////                        latLngMap.put("lat", lat);
+////                        latLngMap.put("lon", lon);
+////                        latLngList.add(latLngMap);
+//                    }
+//                } catch (JSONException e) {
+//                e.printStackTrace();
+            }
+
+            return "done";
+        }
+
+        @Override
+        protected void onPostExecute(String result){
+
+        }
+    }
+
+    public String loadJSONFromAsset() {
+        String json = null;
+        try {
+            InputStream is = getActivity().getAssets().open("loc1.json");
+            int size = is.available();
+            byte[] buffer = new byte[size];
+            is.read(buffer);
+            is.close();
+            json = new String(buffer, "UTF-8");
+        } catch (IOException ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        return json;
+    }
+
+
 }

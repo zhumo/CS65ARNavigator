@@ -180,14 +180,14 @@ public class DirectionsManager {
                     DirectionsParser directionsParser = new DirectionsParser();
                     routes = directionsParser.parse(jsonObject);
 
-                    String encodedPoly = jsonObject.getJSONObject("overview_polyline").getString("points");
+                    //String encodedPoly = jsonObject.getJSONObject("overview_polyline").getString("points");
 
                 } catch (JSONException je) {
                     je.printStackTrace();
                 }
 
-                if (paths != null) {
-                    setPaths(paths);
+                if (routes != null) {
+                    setPaths(routes);
                 }
 
                 return routes;

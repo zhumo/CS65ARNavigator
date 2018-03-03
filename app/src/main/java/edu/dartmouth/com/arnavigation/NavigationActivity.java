@@ -81,8 +81,10 @@ public class NavigationActivity extends AppCompatActivity {
         newDirectionsReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
-                Log.d("mztag", rawDirectionsJSON);
+                //String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
+                //Log.d("mztag", rawDirectionsJSON);
+
+                Log.d("NEW_DIRECTIONS", "New directions received");
 
                 navigationMapFragment.createNewDirections(directionsManager.getPaths());
                 cameraFragment.createNewDirections(directionsManager.getPaths());
@@ -137,6 +139,7 @@ public class NavigationActivity extends AppCompatActivity {
                 lastKnownLocation.getLongitude()
         );
         navigationMapFragment.setUserLocation(currentLatLng);
+        cameraFragment.setUserLocation(currentLatLng);
 
         // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
