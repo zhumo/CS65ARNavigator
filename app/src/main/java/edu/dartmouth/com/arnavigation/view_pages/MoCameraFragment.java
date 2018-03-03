@@ -40,6 +40,7 @@ import com.google.ar.core.Frame;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.core.PointCloud;
+import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
@@ -65,6 +66,7 @@ import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
+import edu.dartmouth.com.arnavigation.renderers.Circle;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
 import edu.dartmouth.com.arnavigation.renderers.PlaneRenderer;
@@ -78,7 +80,6 @@ import edu.dartmouth.com.arnavigation.renderers.PointCloudRenderer;
 public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer {
     private static final String TAG = MoCameraFragment.class.getSimpleName();
 
-    // Rendering. The Renderers are created here, and initialized when the GL surface is created.
     private GLSurfaceView mSurfaceView;
 
     private Session mSession;
@@ -88,13 +89,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
     private final ObjectRenderer mVirtualObject = new ObjectRenderer();
     private final ObjectRenderer mVirtualObjectShadow = new ObjectRenderer();
-    private final PlaneRenderer mPlaneRenderer = new PlaneRenderer();
-    private final PointCloudRenderer mPointCloud = new PointCloudRenderer();
 
-    // Temporary matrix allocated here to reduce number of allocations for each frame.
     private final float[] mAnchorMatrix = new float[16];
 
-    // Tap handling and UI.
     private final ArrayBlockingQueue<MotionEvent> mQueuedSingleTaps = new ArrayBlockingQueue<>(16);
     private final ArrayList<Anchor> mAnchors = new ArrayList<>();
 
@@ -103,6 +100,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private LatLng mDestination;
 
     private List<NearbyPlace> nearbyPlaces;
+
+    private float[] PLACE_MARKER_COLOR = new float[] {46, 194, 138, 1};
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -170,10 +169,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             }
         });
 
-        // Set up renderer.
         mSurfaceView.setPreserveEGLContextOnPause(true);
         mSurfaceView.setEGLContextClientVersion(2);
-        mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0); // Alpha used for plane blending.
+        mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0);
         mSurfaceView.setRenderer(this);
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
 
@@ -183,10 +181,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     @Override
     public void onResume() {
         super.onResume();
-
         if (mSession != null) {
             Toast.makeText(getContext(), "Loading...", Toast.LENGTH_SHORT).show();
-            // Note that order matters - see the note in onPause(), the reverse applies here.
             mSession.resume();
         }
         mSurfaceView.onResume();
@@ -196,9 +192,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     @Override
     public void onPause() {
         super.onPause();
-        // Note that the order matters - GLSurfaceView is paused first so that it does not try
-        // to query the session. If Session is paused before GLSurfaceView, GLSurfaceView may
-        // still call mSession.update() and get a SessionPausedException.
         mDisplayRotationHelper.onPause();
         mSurfaceView.onPause();
         if (mSession != null) {
@@ -211,10 +204,12 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         super.setUserVisibleHint(isVisibleToUser);
         if(mSurfaceView == null) { return; }
 
+        // When the fragment scrolls into or out of the viewpager,
+        // it should act as if it were paused or resumed.
         if (isVisibleToUser) {
-            mSurfaceView.onResume();
+            onResume();
         } else {
-            mSurfaceView.onPause();
+            onPause();
         }
     }
 
@@ -235,8 +230,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                         NearbyPlace nearbyPlace = new NearbyPlace(nearbyPlaceJSON);
                         nearbyPlaces.add(nearbyPlace);
                     }
-
-                    // TODO: Build markers here.
                 } else {
                     AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
                     builder.setTitle("Error");
@@ -266,38 +259,28 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     }
 
     private void onSingleTap(MotionEvent e) {
-        // Queue tap if there is space. Tap is lost if queue is full.
+        // Leaky bucket
         mQueuedSingleTaps.offer(e);
     }
+
+    private Circle circle = new Circle();
 
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-        // Create the texture and pass it to ARCore session to be filled during update().
         mBackgroundRenderer.createOnGlThread(getContext());
         if (mSession != null) {
             mSession.setCameraTextureName(mBackgroundRenderer.getTextureId());
         }
 
-        // Prepare the other rendering objects.
         try {
+            circle.createOnGLThread(PLACE_MARKER_COLOR, getContext());
             mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
-            mVirtualObjectShadow.createOnGlThread(getContext(),
-                    "andy_shadow.obj", "andy_shadow.png");
-            mVirtualObjectShadow.setBlendMode(BlendMode.Shadow);
-            mVirtualObjectShadow.setMaterialProperties(1.0f, 0.0f, 0.0f, 1.0f);
         } catch (IOException e) {
             Log.e(TAG, "Failed to read obj file");
         }
-        try {
-            mPlaneRenderer.createOnGlThread(getContext(), "trigrid.png");
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to read plane texture");
-        }
-        mPointCloud.createOnGlThread(getContext());
     }
 
     @Override
@@ -305,6 +288,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         mDisplayRotationHelper.onSurfaceChanged(width, height);
         GLES20.glViewport(0, 0, width, height);
     }
+
+    private boolean circleCreated = false;
 
     @Override
     public void onDrawFrame(GL10 gl) {
@@ -330,29 +315,25 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 for (HitResult hit : frame.hitTest(tap)) {
-                    // Check if any plane was hit, and if it was hit inside the plane polygon
+                    // TODO: Check whether marker was tapped.
                     Trackable trackable = hit.getTrackable();
-                    if (trackable instanceof Plane
-                            && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
-                        // Cap the number of objects created. This avoids overloading both the
-                        // rendering system and ARCore.
-                        if (mAnchors.size() >= 20) {
-                            mAnchors.get(0).detach();
-                            mAnchors.remove(0);
-                        }
-                        // Adding an Anchor tells ARCore that it should track this position in
-                        // space. This anchor is created on the Plane to place the 3d model
-                        // in the correct position relative both to the world and to the plane.
-                        mAnchors.add(hit.createAnchor());
-
-                        // Hits are sorted by depth. Consider only closest hit on a plane.
-                        break;
+                    if (trackable instanceof Plane && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
                     }
+
+                    mAnchors.add(hit.createAnchor());
+                    // Hits are sorted by depth. Consider only closest hit on a plane.
+                    break;
                 }
             }
 
             // Draw background.
             mBackgroundRenderer.draw(frame);
+
+            if(!circleCreated) {
+                Anchor circleAnchor = mSession.createAnchor(camera.getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation()));
+                mAnchors.add(circleAnchor);
+                circleCreated = true;
+            }
 
             // If not tracking, don't draw 3d objects.
             if (camera.getTrackingState() == TrackingState.PAUSED) {
@@ -370,19 +351,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
 
-            // Visualize tracked points.
-            PointCloud pointCloud = frame.acquirePointCloud();
-            mPointCloud.update(pointCloud);
-            mPointCloud.draw(viewmtx, projmtx);
-
-            // Application is responsible for releasing the point cloud resources after
-            // using it.
-            pointCloud.release();
-
-            // Visualize planes.
-            mPlaneRenderer.drawPlanes(
-                    mSession.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
-
             // Visualize anchors created by touch.
             float scaleFactor = 1.0f;
             for (Anchor anchor : mAnchors) {
@@ -393,10 +361,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 // during calls to session.update() as ARCore refines its estimate of the world.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
-                // Update and draw the model and its shadow.
+//                circle.updateModelMatrix(mAnchorMatrix, scaleFactor);
+//                circle.drawWithIndices(viewmtx, projmtx, lightIntensity);
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
                 mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
             }
 

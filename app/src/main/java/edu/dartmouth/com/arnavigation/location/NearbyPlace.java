@@ -1,5 +1,9 @@
 package edu.dartmouth.com.arnavigation.location;
 
+import android.location.Location;
+
+import com.google.android.gms.maps.model.LatLng;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
