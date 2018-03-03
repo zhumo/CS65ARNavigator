@@ -16,16 +16,12 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
-import android.app.Activity;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.BaseTransientBottomBar;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -67,6 +63,7 @@ import javax.microedition.khronos.opengles.GL10;
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
 import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
+import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
@@ -104,6 +101,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     //location reference
     private LatLng mUserLatLng;
     private LatLng mDestination;
+
+    private List<NearbyPlace> nearbyPlaces;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -223,31 +222,36 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         new GetNearbyPlacesRequest(new GetNearbyPlacesRequest.OnPostExecute() {
             @Override
             public void onPostExecute(JSONObject responseJSON) {
-                try {
-                    // Use these to debug the HTTP requests
-                    // Log.d("mztag", "Status: " + responseJSON.getString("status"));
-                    // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
-                    if (responseJSON.getString("status").equals("OK")) {
-                        JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
-                        for (int i = 0; i < nearbyPlacesJSON.length(); i++) {
-                            JSONObject nearbyPlaceJSON = nearbyPlacesJSON.getJSONObject(i);
-                            Log.d("mztag", "Nearby Place #" + i + ": " + nearbyPlaceJSON.get("name"));
-                        }
-                    } else {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                        builder.setTitle("Error");
-                        builder.setMessage("Could not load nearby places");
-                        builder.setPositiveButton("OK", null);
-                        builder.show();
+            try {
+                // Use these to debug the HTTP requests
+                // Log.d("mztag", "Status: " + responseJSON.getString("status"));
+                // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
+                if (responseJSON.getString("status").equals("OK")) {
+                    JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
+
+                    nearbyPlaces = new ArrayList<>();
+                    for (int i = 0; i < nearbyPlacesJSON.length(); i++) {
+                        JSONObject nearbyPlaceJSON = nearbyPlacesJSON.getJSONObject(i);
+                        NearbyPlace nearbyPlace = new NearbyPlace(nearbyPlaceJSON);
+                        nearbyPlaces.add(nearbyPlace);
                     }
-                } catch (JSONException e) {
+
+                    // TODO: Build markers here.
+                } else {
                     AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
                     builder.setTitle("Error");
                     builder.setMessage("Could not load nearby places");
                     builder.setPositiveButton("OK", null);
                     builder.show();
-                    e.printStackTrace();
                 }
+            } catch (JSONException e) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                builder.setTitle("Error");
+                builder.setMessage("Could not load nearby places");
+                builder.setPositiveButton("OK", null);
+                builder.show();
+                e.printStackTrace();
+            }
             }
         }).execute(mUserLatLng);
     }
