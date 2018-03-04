@@ -251,4 +251,12 @@ public class Circle {
         scaleMatrix[10] = scaleFactor;
         Matrix.multiplyMM(mModelMatrix, 0, modelMatrix, 0, scaleMatrix, 0);
     }
+
+    public void setMaterialProperties(
+        float ambient, float diffuse, float specular, float specularPower) {
+        mAmbient = ambient;
+        mDiffuse = diffuse;
+        mSpecular = specular;
+        mSpecularPower = specularPower;
+    }
 }

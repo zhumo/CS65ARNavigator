@@ -16,7 +16,13 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.os.Bundle;
@@ -33,6 +39,7 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.nearby.Nearby;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
@@ -77,7 +84,7 @@ import edu.dartmouth.com.arnavigation.renderers.PointCloudRenderer;
  * the ARCore API. The application will display any detected planes and will allow the user to
  * tap on a plane to place a 3d model of the Android robot.
  */
-public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer {
+public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer, SensorEventListener {
     private static final String TAG = MoCameraFragment.class.getSimpleName();
 
     private GLSurfaceView mSurfaceView;
@@ -98,10 +105,20 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     //location reference
     private LatLng mUserLatLng;
     private LatLng mDestination;
+    private float mHeading;
 
     private List<NearbyPlace> nearbyPlaces;
 
     private float[] PLACE_MARKER_COLOR = new float[] {46, 194, 138, 1};
+
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor magnetometer;
+    private float[] gravityData = new float[3];
+    private float[] geomagneticData  = new float[3];
+    private boolean hasGravityData = false;
+    private boolean hasGeomagneticData = false;
+    private double rotationInDegrees;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -154,6 +171,10 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             return;
         }
         mSession.configure(config);
+
+        sensorManager = (SensorManager) getActivity().getSystemService(Context.SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
     }
 
     @Nullable
@@ -187,6 +208,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
         mSurfaceView.onResume();
         mDisplayRotationHelper.onResume();
+
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
     }
 
     @Override
@@ -197,6 +221,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         if (mSession != null) {
             mSession.pause();
         }
+
+        sensorManager.unregisterListener(this, accelerometer);
+        sensorManager.unregisterListener(this, magnetometer);
     }
 
     @Override
@@ -230,16 +257,18 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                         NearbyPlace nearbyPlace = new NearbyPlace(nearbyPlaceJSON);
                         nearbyPlaces.add(nearbyPlace);
                     }
+
+                    nearbyPlacesChanged = true;
                 } else {
                     AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                    builder.setTitle("Error");
-                    builder.setMessage("Could not load nearby places");
+                    builder.setTitle("Nearby Places Error");
+                    builder.setMessage(responseJSON.getString("error_message"));
                     builder.setPositiveButton("OK", null);
                     builder.show();
                 }
             } catch (JSONException e) {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                builder.setTitle("Error");
+                builder.setTitle("Nearby Places Error");
                 builder.setMessage("Could not load nearby places");
                 builder.setPositiveButton("OK", null);
                 builder.show();
@@ -263,8 +292,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         mQueuedSingleTaps.offer(e);
     }
 
-    private Circle circle = new Circle();
-
     @Override
     public void onSurfaceCreated(GL10 gl, EGLConfig config) {
         GLES20.glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -275,7 +302,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
 
         try {
-            circle.createOnGLThread(PLACE_MARKER_COLOR, getContext());
+//            circle.createOnGLThread(PLACE_MARKER_COLOR, getContext());
+//            circle.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
             mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
         } catch (IOException e) {
@@ -289,7 +317,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         GLES20.glViewport(0, 0, width, height);
     }
 
-    private boolean circleCreated = false;
+    private boolean nearbyPlacesChanged = false;
 
     @Override
     public void onDrawFrame(GL10 gl) {
@@ -314,25 +342,43 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
-                for (HitResult hit : frame.hitTest(tap)) {
-                    // TODO: Check whether marker was tapped.
-                    Trackable trackable = hit.getTrackable();
-                    if (trackable instanceof Plane && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
-                    }
-
-                    mAnchors.add(hit.createAnchor());
-                    // Hits are sorted by depth. Consider only closest hit on a plane.
-                    break;
-                }
+//                for (HitResult hit : frame.hitTest(tap)) {
+//                    // TODO: Check whether marker was tapped.
+//                    Trackable trackable = hit.getTrackable();
+//                    if (trackable instanceof Plane && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
+//                    }
+//
+//                    mAnchors.add(hit.createAnchor());
+//                    // Hits are sorted by depth. Consider only closest hit on a plane.
+//                    break;
+//                }
             }
 
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
-            if(!circleCreated) {
-                Anchor circleAnchor = mSession.createAnchor(camera.getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation()));
-                mAnchors.add(circleAnchor);
-                circleCreated = true;
+            if(nearbyPlacesChanged) {
+                mAnchors.clear();
+                for (int i = 0; i < nearbyPlaces.size(); i++) {
+                    NearbyPlace nearbyPlace = nearbyPlaces.get(i);
+                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading, i);
+                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
+                    mAnchors.add(nearbyPlaceAnchor);
+                }
+
+//                NearbyPlace nearbyPlace = nearbyPlaces.get(0);
+//                Log.d("mztag", "Place: " + nearbyPlace.name);
+//                Log.d("mztag", "Current Loc: " + mUserLatLng.toString());
+//                Log.d("mztag", "Current Heading: " + mHeading);
+//                Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
+//                Pose poseForNearbyPlace = new Pose(
+//                        new float[] {1.0f, 0.0f, -1.0f},
+//                        new float[] {0.0f, 0.0f, 0.0f, 0.0f}
+//                );
+//                Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
+//                mAnchors.add(nearbyPlaceAnchor);
+
+                nearbyPlacesChanged = false;
             }
 
             // If not tracking, don't draw 3d objects.
@@ -364,7 +410,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 //                circle.updateModelMatrix(mAnchorMatrix, scaleFactor);
 //                circle.drawWithIndices(viewmtx, projmtx, lightIntensity);
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
+                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
             }
 
         } catch (Throwable t) {
@@ -404,4 +450,45 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             mDestination = mUserLatLng;
         }
     }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        //obtained this from stack overflow
+        switch (event.sensor.getType()){
+            case Sensor.TYPE_ACCELEROMETER:
+                System.arraycopy(event.values, 0, gravityData, 0, 3);
+                hasGravityData = true;
+                break;
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                System.arraycopy(event.values, 0, geomagneticData, 0, 3);
+                hasGeomagneticData = true;
+                break;
+            default:
+                return;
+        }
+
+        if (hasGravityData && hasGeomagneticData) {
+            float identityMatrix[] = new float[9];
+            float rotationMatrix[] = new float[9];
+            boolean success = SensorManager.getRotationMatrix(rotationMatrix, identityMatrix,
+                    gravityData, geomagneticData);
+
+            if (success) {
+                float orientationMatrix[] = new float[3];
+                SensorManager.getOrientation(rotationMatrix, orientationMatrix);
+                float rotationInRadians = orientationMatrix[0];
+                rotationInDegrees = (Math.toDegrees(rotationInRadians)+360)%360;
+
+                float currentDegree = (float)rotationInDegrees;
+
+                // do something with the rotation in degrees
+                //Log.d("COMPASS", "Heading: " + currentDegree);
+                mHeading = currentDegree;
+            }
+        }
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { /* NOOP */ }
 }

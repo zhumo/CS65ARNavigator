@@ -1,8 +1,10 @@
 package edu.dartmouth.com.arnavigation.location;
 
 import android.location.Location;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.ar.core.Pose;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -30,5 +32,36 @@ public class NearbyPlace {
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    // 0 = distance, 1 = initial bearing, 2 = final bearing.
+    // (We only care about 1 and 2 here.)
+    private float[] distanceResults = new float[3];
+    private float[] translationMatrix = new float[3];
+    private final float[] rotationMatrix = new float[] {0f,0f,0f,0f}; // We don't need to rotate the place marker.
+    public Pose getPose(LatLng startLatLng, float heading, int n) {
+        Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
+        float distance = distanceResults[0];
+        float bearing = distanceResults[1];
+        float angle = bearing - heading;
+        float angleInRads = (float) Math.toRadians((double) angle);
+
+        float xPos = (float) Math.cos(angleInRads) * distance;
+        if(xPos > 3.0f) {
+            xPos = 3.0f;
+        } else if(xPos < -3.0f) {
+            xPos = -3.0f;
+        }
+        float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
+        if(zPos > 3.0f) {
+            zPos = 3.0f;
+        } else if(zPos < -3.0f) {
+            zPos = -3.0f;
+        }
+        translationMatrix[0] = xPos;
+        translationMatrix[1] = 0.0f;
+        translationMatrix[2] = zPos;
+
+        return new Pose(translationMatrix, rotationMatrix);
     }
 }
