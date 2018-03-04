@@ -20,6 +20,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Location;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -405,11 +406,22 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             mBackgroundRenderer.draw(frame);
 
             if (isLineCreated == true){
-                //add anchor
-//                mAnchors.add(mSession.createAnchor(
-//                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
 
-                mAnchors.add(mSession.createAnchor(leg.getLegPose()));
+                LatLng firstLoc = leg.getPoints()[0];
+                float[] results = new float[2];
+
+                Location.distanceBetween(mUserLatLng.latitude, mUserLatLng.longitude, firstLoc.latitude, firstLoc.latitude, results);
+
+                float bearing = results[1];
+                float bearing360 = (((bearing % 360) + 360) % 360);
+
+                Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360);
+
+                //add anchor
+                mAnchors.add(mSession.createAnchor(
+                        frame.getCamera().getPose().compose(Pose.makeRotation(0, -bearing360, 0, 0).extractRotation())));
+
+                //mAnchors.add(mSession.createAnchor(leg.getLegPose()));
 
                 isLineCreated = false; //set false so only one anchor at a time
             }
@@ -613,8 +625,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
                 leg = new LegObject(waypointsArray);
                 //create buffers from current user location
-                leg.createTranslationBufferRelativeToLatLng(mUserLatLng);
-                leg.setLegPose(mUserLatLng, mHeading);
+                leg.createTranslationBufferRelativeToLatLng(mUserLatLng, mHeading);
+                //leg.setLegPose(mUserLatLng, mHeading);
 
                 lineRenderer.setLineVertices(leg.getVertices());
                 lineRenderer.setLineIndices(leg.getIndices());
@@ -689,7 +701,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     public void onSensorChanged(SensorEvent event) {
 
         //obtained this from stack overflow
-        switch (event.sensor.getType()){
+        switch (event.sensor.getType()) {
             case Sensor.TYPE_ACCELEROMETER:
                 System.arraycopy(event.values, 0, gravityData, 0, 3);
                 hasGravityData = true;
@@ -712,12 +724,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 float orientationMatrix[] = new float[3];
                 SensorManager.getOrientation(rotationMatrix, orientationMatrix);
                 float rotationInRadians = orientationMatrix[0];
-                rotationInDegrees = (Math.toDegrees(rotationInRadians)+360)%360;
+                rotationInDegrees = (Math.toDegrees(rotationInRadians) + 360) % 360;
 
-                float currentDegree = (float)rotationInDegrees;
+                float currentDegree = (float) rotationInDegrees;
 
                 // do something with the rotation in degrees
-                //Log.d("COMPASS", "Heading: " + currentDegree);
+                Log.d("COMPASS", "Heading: " + currentDegree);
                 mHeading = currentDegree;
             }
         }

@@ -132,29 +132,36 @@ public class LegObject {
         Location.distanceBetween(userPosition.latitude, userPosition.longitude,
                 mWayPointsArray[0].latitude, mWayPointsArray[0].longitude, results);
 
-        Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + results[1]);
+
+        float distance = results[0];
+        double bearing = (double)results[1];
+        float bearing360 = results[1];
+        bearing360 = (((bearing360 % 360) + 360) % 360); //way to calculate true modulus
+
+        Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + bearing);
 
         float[] translation = new float[3]; //three dimensional translation
-        translation[0] = 0.0f;
+        translation[0] = 0.0f; //(float)(distance * Math.cos(bearing));
         translation[1] = 0.0f;
-        translation[2] = 0.0f; //may set to distance
+        translation[2] = 0.0f; //(float)(distance * Math.sin(bearing));
 
         float[] rotation = new float[4]; //quaternion rotation
         //calculate using heading ...
         //hardcode for now
         rotation[0] = 0.0f;
-        rotation[1] = heading + results[1]; //y rotation of bearing
-        rotation[2] = 0;
-        rotation[3] = 0;
+        rotation[1] = bearing360 - heading; //y rotation of bearing
+        rotation[2] = 0.0f;
+        rotation[3] = 0.0f;
 
-        Log.d("LEG_POSE", "Leg pose y rotation: " + rotation[1]);
+        Log.d("LEG_POSE", "Leg pose translation \n x:" + translation[0] + " y:" + translation[1] + " z:" + translation[2]
+                + "\n Leg pose rotation \n x:" +rotation[0] + " y:" + rotation[1] + " z:" + rotation[2] + " w:" + rotation[3]);
 
         legPose = new Pose(translation, rotation);
     }
 
 
     //creates a FloatBuffer of translations for OpenGL relative to input location
-    public void createTranslationBufferRelativeToLatLng(LatLng refLatLng) {
+    public void createTranslationBufferRelativeToLatLng(LatLng refLatLng, float heading) {
 
         double startLat = refLatLng.latitude;
         double startLon = refLatLng.longitude;
@@ -168,16 +175,46 @@ public class LegObject {
         //use int[] as index buffer, should be size - 1 * 2
         indices = new short[2 * (mWayPointsArray.length - 1)];
 
+        float[] results = new float[2];
+        float distance;
+        float bearingFloat;
+        double bearingDouble;
+        double relativeAngle;
+
+        LatLng thisLatLng;
+        LatLng lastLatLng;
+
 
         for (int i = 0; i < mWayPointsArray.length; i++){
             int j = i * 3;
 
-            latDiff = mWayPointsArray[i].latitude - startLat;
-            lonDiff = mWayPointsArray[i].longitude - startLon;
+            thisLatLng = mWayPointsArray[i];
 
-            vertices[j] = (float)lonDiff * latLngToScreenScale;
-            vertices[j+1] = 0.0f;
-            vertices[j+2] = (float)latDiff * latLngToScreenScale;
+            if (i == 0){
+                lastLatLng = refLatLng;
+            } else {
+                lastLatLng = mWayPointsArray[i-1];
+            }
+
+            Location.distanceBetween(lastLatLng.latitude, lastLatLng.longitude, thisLatLng.latitude, thisLatLng.longitude, results);
+            distance = results[1];
+            bearingFloat = results[1];
+            bearingFloat = (((bearingFloat % 360) + 360) % 360);
+            relativeAngle = (double) bearingFloat - heading;
+
+            bearingDouble = (double)results[1];
+
+            vertices[j] = (float)(distance * Math.cos(bearingDouble));
+            vertices[j+1] = -0.5f;
+            vertices[j+2] = (float)(distance * Math.sin(bearingDouble));
+
+
+//            latDiff = mWayPointsArray[i].latitude - startLat;
+//            lonDiff = mWayPointsArray[i].longitude - startLon;
+//
+//            vertices[j] = (float)lonDiff * latLngToScreenScale;
+//            vertices[j+1] = 0.0f;
+//            vertices[j+2] = (float)latDiff * latLngToScreenScale;
 
             if (i < mWayPointsArray.length - 1){
                 int k = i*2;
