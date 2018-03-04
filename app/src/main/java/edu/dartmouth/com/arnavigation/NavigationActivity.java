@@ -6,6 +6,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
@@ -50,8 +54,8 @@ public class NavigationActivity extends AppCompatActivity {
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
     BroadcastReceiver newDirectionsReceiver;
-
     BroadcastReceiver updateLocationReceiver;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -102,6 +106,7 @@ public class NavigationActivity extends AppCompatActivity {
 //                }
             }
         };
+
 
         PermissionManager.ensurePermissions(
             this,
@@ -159,6 +164,7 @@ public class NavigationActivity extends AppCompatActivity {
         IntentFilter updateLocationIntentFilter = new IntentFilter();
         updateLocationIntentFilter.addAction(LocationService.UPDATE_LOCATION_ACTION);
         registerReceiver(updateLocationReceiver, updateLocationIntentFilter);
+
     }
 
     @Override
@@ -231,4 +237,6 @@ public class NavigationActivity extends AppCompatActivity {
         if(resultCode == Activity.RESULT_OK) { initialize(); }
         else { finish(); }
     }
+
+
 }

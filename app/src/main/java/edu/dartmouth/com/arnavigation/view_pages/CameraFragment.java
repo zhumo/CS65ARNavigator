@@ -16,6 +16,10 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -77,12 +81,14 @@ import java.util.concurrent.ArrayBlockingQueue;
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
+import static android.content.Context.SENSOR_SERVICE;
+
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
  * the ARCore API. The application will display any detected planes and will allow the user to
  * tap on a plane to place a 3d model of the Android robot.
  */
-public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
+public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, SensorEventListener {
     private static final String TAG = CameraFragment.class.getSimpleName();
 
     // Rendering. The Renderers are created here, and initialized when the GL surface is created.
@@ -118,14 +124,27 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     //location reference
     private LatLng mUserLatLng;
     private LatLng mDestination;
+    private float mHeading;
 
     //store route as legobjects
     private ArrayList<LegObject> legs;
+    LegObject leg;
     private ArrayList<Line> lines;
     private Line lineRenderer = new Line();
     private Triangle triangle = new Triangle();
 
     private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
+
+
+    //for getting heading using accelerometer and magnetometer
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor magnetometer;
+    private float[] gravityData = new float[3];
+    private float[] geomagneticData  = new float[3];
+    private boolean hasGravityData = false;
+    private boolean hasGeomagneticData = false;
+    private double rotationInDegrees;
 
 
 
@@ -180,6 +199,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
             showSnackbarMessage("This device does not support AR", true);
         }
         mSession.configure(config);
+
+
+        sensorManager = (SensorManager) getActivity().getSystemService(SENSOR_SERVICE);
+        accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
     }
 
     @Nullable
@@ -216,6 +241,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         }
         mSurfaceView.onResume();
         mDisplayRotationHelper.onResume();
+
+        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
     }
 
     @Override
@@ -229,6 +257,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         if (mSession != null) {
             mSession.pause();
         }
+
+        sensorManager.unregisterListener(this, accelerometer);
+        sensorManager.unregisterListener(this, magnetometer);
     }
 
     @Override
@@ -319,6 +350,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
 
         if (mSession == null) {
+            if (leg != null){
+                isLineCreated = true;
+            }
             return;
         }
         // Notify ARCore session that the view size changed so that the perspective matrix and
@@ -358,12 +392,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 //                    }
 //                }
 
-                if (mAnchors.size() >= 1) {
-                    mAnchors.get(0).detach();
-                    mAnchors.remove(0);
-                }
-                mAnchors.add(mSession.createAnchor(
-                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+//                if (mAnchors.size() >= 1) {
+//                    mAnchors.get(0).detach();
+//                    mAnchors.remove(0);
+//                }
+//                mAnchors.add(mSession.createAnchor(
+//                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
                         //frame.getCamera().getPose().compose(Pose.makeRotation(0, 180, 90, 0).extractRotation())));
             }
 
@@ -372,8 +406,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
             if (isLineCreated == true){
                 //add anchor
-                mAnchors.add(mSession.createAnchor(
-                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+//                mAnchors.add(mSession.createAnchor(
+//                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
+
+                mAnchors.add(mSession.createAnchor(leg.getLegPose()));
 
                 isLineCreated = false; //set false so only one anchor at a time
             }
@@ -434,7 +470,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
                     continue;
                 }
 
-                Log.d("DRAWING_LINE", "Drawing line for anchors");
+                //Log.d("DRAWING_LINE", "Drawing line for anchors");
 
                 // Get the current pose of an Anchor in world space. The Anchor pose is updated
                 // during calls to session.update() as ARCore refines its estimate of the world.
@@ -543,6 +579,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
     }
 
 
+
+
     //async task to parse JSON response from request
     private class ParsePathDirectionsTask extends AsyncTask<List<List<HashMap<String, String>>>, Void, String> {
         @Override
@@ -573,12 +611,13 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
 
                 LatLng[] waypointsArray = waypoints.toArray(new LatLng[waypoints.size()]);
 
-                LegObject legObject = new LegObject(waypointsArray);
+                leg = new LegObject(waypointsArray);
                 //create buffers from current user location
-                legObject.createTranslationBufferRelativeToLatLng(mUserLatLng);
+                leg.createTranslationBufferRelativeToLatLng(mUserLatLng);
+                leg.setLegPose(mUserLatLng, mHeading);
 
-                lineRenderer.setLineVertices(legObject.getVertices());
-                lineRenderer.setLineIndices(legObject.getIndices());
+                lineRenderer.setLineVertices(leg.getVertices());
+                lineRenderer.setLineIndices(leg.getIndices());
 
                 lineRenderer.printLine();
 
@@ -644,20 +683,50 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer {
         }
     }
 
-    public String loadJSONFromAsset() {
-        String json = null;
-        try {
-            InputStream is = getActivity().getAssets().open("loc1.json");
-            int size = is.available();
-            byte[] buffer = new byte[size];
-            is.read(buffer);
-            is.close();
-            json = new String(buffer, "UTF-8");
-        } catch (IOException ex) {
-            ex.printStackTrace();
-            return null;
+
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+
+        //obtained this from stack overflow
+        switch (event.sensor.getType()){
+            case Sensor.TYPE_ACCELEROMETER:
+                System.arraycopy(event.values, 0, gravityData, 0, 3);
+                hasGravityData = true;
+                break;
+            case Sensor.TYPE_MAGNETIC_FIELD:
+                System.arraycopy(event.values, 0, geomagneticData, 0, 3);
+                hasGeomagneticData = true;
+                break;
+            default:
+                return;
         }
-        return json;
+
+        if (hasGravityData && hasGeomagneticData) {
+            float identityMatrix[] = new float[9];
+            float rotationMatrix[] = new float[9];
+            boolean success = SensorManager.getRotationMatrix(rotationMatrix, identityMatrix,
+                    gravityData, geomagneticData);
+
+            if (success) {
+                float orientationMatrix[] = new float[3];
+                SensorManager.getOrientation(rotationMatrix, orientationMatrix);
+                float rotationInRadians = orientationMatrix[0];
+                rotationInDegrees = (Math.toDegrees(rotationInRadians)+360)%360;
+
+                float currentDegree = (float)rotationInDegrees;
+
+                // do something with the rotation in degrees
+                //Log.d("COMPASS", "Heading: " + currentDegree);
+                mHeading = currentDegree;
+            }
+        }
+
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
     }
 
 

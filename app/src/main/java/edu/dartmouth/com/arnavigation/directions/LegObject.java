@@ -124,24 +124,30 @@ public class LegObject {
         + "\n Second vertex: " + vertices[3] + ", " + vertices[4] + ", " + vertices[5]);
 
         legVertices = vertices;
-
-        setLegPose();
     }
 
-    public void setLegPose() {
+    public void setLegPose(LatLng userPosition, float heading) {
+
+        float[] results = new float[2];
+        Location.distanceBetween(userPosition.latitude, userPosition.longitude,
+                mWayPointsArray[0].latitude, mWayPointsArray[0].longitude, results);
+
+        Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + results[1]);
 
         float[] translation = new float[3]; //three dimensional translation
-        translation[0] = legVertices[3] - legVertices[0];
-        translation[1] = legVertices[4] - legVertices[1];
-        translation[2] = legVertices[5] - legVertices[2];
+        translation[0] = 0.0f;
+        translation[1] = 0.0f;
+        translation[2] = 0.0f; //may set to distance
 
         float[] rotation = new float[4]; //quaternion rotation
         //calculate using heading ...
         //hardcode for now
-        rotation[0] = 0;
-        rotation[1] = 0;
+        rotation[0] = 0.0f;
+        rotation[1] = heading + results[1]; //y rotation of bearing
         rotation[2] = 0;
-        rotation[3] = 1;
+        rotation[3] = 0;
+
+        Log.d("LEG_POSE", "Leg pose y rotation: " + rotation[1]);
 
         legPose = new Pose(translation, rotation);
     }
@@ -170,8 +176,8 @@ public class LegObject {
             lonDiff = mWayPointsArray[i].longitude - startLon;
 
             vertices[j] = (float)lonDiff * latLngToScreenScale;
-            vertices[j+1] = (float)latDiff * latLngToScreenScale;
-            vertices[j+2] = 0f;
+            vertices[j+1] = 0.0f;
+            vertices[j+2] = (float)latDiff * latLngToScreenScale;
 
             if (i < mWayPointsArray.length - 1){
                 int k = i*2;
