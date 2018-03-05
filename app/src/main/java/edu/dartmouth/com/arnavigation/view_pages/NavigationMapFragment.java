@@ -13,6 +13,11 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.ViewManager;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdate;
@@ -34,6 +39,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
+import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.directions.DirectionsParser;
 
 public class NavigationMapFragment extends SupportMapFragment implements OnMapReadyCallback {
@@ -61,6 +67,18 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     @Override
+    public View onCreateView(LayoutInflater layoutInflater, ViewGroup viewGroup, Bundle bundle) {
+        View mapFragment = super.onCreateView(layoutInflater, viewGroup, bundle);
+
+        View locationButton = ((View) mapFragment.findViewById(1).getParent()).findViewById(2);
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+        layoutParams.topMargin = 275; // Push the button down a bit, because it's being blocked.
+        locationButton.setLayoutParams(layoutParams);
+
+        return mapFragment;
+    }
+
+    @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
@@ -70,12 +88,12 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         setZoom(mUserLatLng);
     }
 
-    private void zoomToUser() {
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLatLng, 17.0f));
+    private void zoomToUser() { zoomTo(mUserLatLng); }
+    private void zoomTo(LatLng zoomToLatLng) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomToLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition) {
-
         mMap.addMarker(new MarkerOptions().position(mUserLatLng).icon(
                 BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
         );
@@ -88,9 +106,7 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     private void setZoom(LatLng position) {
-        if (position != null){
-            setNewBounds(position);
-        }
+        if (position != null){ setNewBounds(position); }
     }
 
     private void setNewBounds(LatLng finalPosition) {
@@ -132,7 +148,16 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         return zoom;
     }
 
-    public void setUserLocation(LatLng newLocation) { mUserLatLng = newLocation; }
+    public void setUserLocation(LatLng newLocation) {
+        if(mUserLatLng == null) {
+            if (mMap != null) {
+                mUserLatLng = newLocation;
+                zoomToUser();
+            }
+        } else {
+            mUserLatLng = newLocation;
+        }
+    }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
 
@@ -147,7 +172,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
                 mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
                         Double.parseDouble(lastPointHashMap.get("lon")));
 
-
                 //run polyline task
                 new ParseMapDirectionsTask().execute(path);
             } else {
@@ -155,7 +179,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
             }
         }
     }
-
 
     private void addToPolyine(ArrayList<LatLng> waypoints) {
         //add new waypoints to polyline
@@ -171,12 +194,10 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         zoomToUser();
     }
 
-
     //async task to parse JSON response from request
     private class ParseMapDirectionsTask extends AsyncTask<List<List<HashMap<String, String>>>, Void, String> {
         @Override
         protected String doInBackground(List<List<HashMap<String, String>>> ... paths) {
-
             //draw paths
             ArrayList waypoints = null;
 
@@ -207,7 +228,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         @Override
         protected void onPostExecute(String result){
-
             if (polylineOptions != null) {
                 mMap.clear();
                 mMap.addPolyline(polylineOptions);

@@ -40,12 +40,14 @@ public class Triangle {
     private final String projectedVertexShaderCode =
             "uniform mat4 u_ModelView;" +
                     "uniform mat4 u_ModelViewProjection;" +
-                        "attribute vec4 a_Position;" +
-                        "attribute vec3 a_Normal;" +
-                        "attribute vec2 a_TexCoord;" +
-                            "varying vec3 v_ViewPosition;" +
-                            "varying vec3 v_ViewNormal;" +
-                             "varying vec2 v_TexCoord;" +
+      
+                    "attribute vec4 a_Position;" +
+                    "attribute vec3 a_Normal;" +
+                    "attribute vec2 a_TexCoord;" +
+                    "varying vec3 v_ViewPosition;" +
+                    "varying vec3 v_ViewNormal;" +
+                    "varying vec2 v_TexCoord;" +
+
                     "void main(){" +
                     "  v_ViewPosition = (u_ModelView * a_Position).xyz;" +
                     "  v_ViewNormal = normalize((u_ModelView * vec4(a_Normal, 0.0)).xyz);" +
@@ -113,7 +115,8 @@ public class Triangle {
 
     }
 
-    public void createOnGLThread(Context context) {
+
+    public void createOnGlThread(Context context) {
 
         // initialize vertex byte buffer for shape coordinates
         ByteBuffer bb = ByteBuffer.allocateDirect(
@@ -272,3 +275,4 @@ public class Triangle {
         v[2] *= reciprocalLength;
     }
 }
+

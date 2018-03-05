@@ -15,14 +15,15 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
+import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -38,15 +39,18 @@ import edu.dartmouth.com.arnavigation.directions.DirectionsManager;
 import edu.dartmouth.com.arnavigation.location.LocationService;
 import edu.dartmouth.com.arnavigation.permissions.PermissionManager;
 import edu.dartmouth.com.arnavigation.view_pages.CameraFragment;
+import edu.dartmouth.com.arnavigation.view_pages.MoCameraFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NavigationMapFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
+
     private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
 
     //private EditText mLocationSearchText;
     private Spinner travelSpinner;
+
 
     private DirectionsManager directionsManager;
 
@@ -54,7 +58,7 @@ public class NavigationActivity extends AppCompatActivity {
 
     NonSwipingViewPager viewPager;
 
-    CameraFragment cameraFragment = new CameraFragment();
+    MoCameraFragment cameraFragment = new MoCameraFragment();
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
     BroadcastReceiver newDirectionsReceiver;
@@ -71,12 +75,6 @@ public class NavigationActivity extends AppCompatActivity {
         // get destination input
         //mLocationSearchText = findViewById(R.id.locationSearchText);
 
-        // get and set travel spinner
-        travelSpinner = findViewById(R.id.travelSpinner);
-        ArrayAdapter<String> travelAdapter = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item, TRAVEL_ENTRIES);
-        travelAdapter.setDropDownViewResource(android.R.layout.simple_dropdown_item_1line);
-        travelSpinner.setAdapter(travelAdapter);
-
         updateLocationReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -85,34 +83,31 @@ public class NavigationActivity extends AppCompatActivity {
                 intent.getExtras().getDouble(LocationService.LONGITUDE_KEY)
             );
             currentLatLng = newLatLng;
+            navigationMapFragment.setUserLocation(newLatLng);
+            cameraFragment.setUserLocation(newLatLng);
             }
         };
 
         newDirectionsReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
-                //String rawDirectionsJSON = intent.getStringExtra(DirectionsManager.DIRECTIONS_JSON_KEY);
-                //Log.d("mztag", rawDirectionsJSON);
+                boolean directionsResultSuccess = intent.getExtras().getBoolean(DirectionsManager.DIRECTIONS_RESULTS_SUCCESS_KEY);
+                if (directionsResultSuccess) {
+                    navigationMapFragment.createNewDirections(directionsManager.getPaths());
+                    cameraFragment.createNewDirections(directionsManager.getPaths());
+                } else {
+                    Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
+                }
 
-                Log.d("NEW_DIRECTIONS", "New directions received");
-
-                navigationMapFragment.createNewDirections(directionsManager.getPaths());
-                cameraFragment.createNewDirections(directionsManager.getPaths());
-
-//                try {
-//                    JSONObject directionsJSON = new JSONObject(rawDirectionsJSON);
-//                    if (directionsJSON.get("status").equals("OK")){
-//                        navigationMapFragment.new
-//                    } else {
-//                        Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
-//                    }
-//                } catch (JSONException e) {
-//                    e.printStackTrace();
-//                    Toast.makeText(NavigationActivity.this, "Could not find directions.", Toast.LENGTH_SHORT).show();
-//                }
+                // Re-enable search button now that results have come back.
+                Button searchButton = findViewById(R.id.searchButton);
+                searchButton.setEnabled(true);
             }
         };
 
+        IntentFilter newDirectionsIntentFilter = new IntentFilter();
+        newDirectionsIntentFilter.addAction(DirectionsManager.DIRECTIONS_RESULTS_ACTION);
+        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
 
         PermissionManager.ensurePermissions(
             this,
@@ -129,13 +124,6 @@ public class NavigationActivity extends AppCompatActivity {
     private void initialize() {
         // Set up directions manager with listener.
         directionsManager = new DirectionsManager(NavigationActivity.this);
-        IntentFilter newDirectionsIntentFilter = new IntentFilter();
-        newDirectionsIntentFilter.addAction(DirectionsManager.NEW_DIRECTIONS_ACTION);
-        registerReceiver(newDirectionsReceiver, newDirectionsIntentFilter);
-
-        // Start location service
-        Intent startLocationServiceIntent = new Intent(NavigationActivity.this, LocationService.class);
-        startService(startLocationServiceIntent);
 
         // Get last known location and initialize map fragment with that info
         Criteria locationProviderCriteria = new Criteria();
@@ -145,13 +133,15 @@ public class NavigationActivity extends AppCompatActivity {
 
         Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
 
-        currentLatLng = new LatLng(
+        if (lastKnownLocation != null) {
+            currentLatLng = new LatLng(
                 lastKnownLocation.getLatitude(),
                 lastKnownLocation.getLongitude()
-        );
-        navigationMapFragment.setUserLocation(currentLatLng);
-        cameraFragment.setUserLocation(currentLatLng);
-
+            );
+            navigationMapFragment.setUserLocation(currentLatLng);
+            cameraFragment.setUserLocation(currentLatLng);
+        }
+      
         // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
 
@@ -184,6 +174,10 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
+        // Start location service
+        Intent startLocationServiceIntent = new Intent(this, LocationService.class);
+        startService(startLocationServiceIntent);
+
         IntentFilter updateLocationIntentFilter = new IntentFilter();
         updateLocationIntentFilter.addAction(LocationService.UPDATE_LOCATION_ACTION);
         registerReceiver(updateLocationReceiver, updateLocationIntentFilter);
@@ -194,6 +188,7 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
 
+        stopService(new Intent(this, LocationService.class));
         unregisterReceiver(updateLocationReceiver);
     }
 
@@ -230,16 +225,12 @@ public class NavigationActivity extends AppCompatActivity {
         //String address = mLocationSearchText.getText().toString();
 
         //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(currentLatLng, placeAddress, travelSpinner.getSelectedItemPosition());
+        directionsManager.getDirectionsWithAddress(currentLatLng, placeAddress);
     }
 
     public void resetButtonClicked(View v) {
         navigationMapFragment.reset();
         cameraFragment.reset();
-
-        //EditText destinationInput = findViewById(R.id.locationSearchText);
-        //destinationInput.setText("");
-        travelSpinner.setSelection(0);
 
         //InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
         //imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
@@ -249,8 +240,24 @@ public class NavigationActivity extends AppCompatActivity {
     }
 
     public void switchViewsButtonClicked(View view) {
-        int nextViewPageIndex = (viewPager.getCurrentItem() + 1) % 2;
-        viewPager.setCurrentItem(nextViewPageIndex,true);
+        FloatingActionButton clickedButton = (FloatingActionButton) view;
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) clickedButton.getLayoutParams();
+
+        if(viewPager.getCurrentItem() == 0) {
+            // Camera Fragment -> Map Fragment
+            viewPager.setCurrentItem(1,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, RelativeLayout.TRUE);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_camera);
+        } else {
+            // Map Fragment -> Camera Fragment
+            viewPager.setCurrentItem(0,true);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_START, 0);
+            layoutParams.addRule(RelativeLayout.ALIGN_PARENT_END, RelativeLayout.TRUE);
+            clickedButton.setImageResource(android.R.drawable.ic_menu_mapmode);
+        }
+
+        clickedButton.setLayoutParams(layoutParams);
     }
 
     @Override

@@ -36,26 +36,14 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     private GoogleApiClient googleApiClient;
     private LocationRequest locationRequest;
 
-    private UpdateBinder updateBinder;
-
     private NotificationManager notificationManager;
     final static int NOTIFICATION_ID = 101;
 
-    private boolean isRunning;
     private long updateInterval = 1000; //1 sec
-
-    private LatLng lastLatLng;
-
-    public LocationService() {
-    }
 
     @Override
     public void onCreate(){
         super.onCreate();
-
-        isRunning = false;
-
-        //connect to client
         googleApiClient = new GoogleApiClient.Builder(this)
                 .addApi(LocationServices.API)
                 .addConnectionCallbacks(this)
@@ -64,39 +52,25 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
     }
 
     @Override
-    public void onDestroy(){
-        //disconnect client
-        googleApiClient.disconnect();
-
-        super.onDestroy();
-    }
-
-
-    private void startService() {
-        if (isRunning) {
-            return;
-        }
-        isRunning = true;
-        //showNotification();
-        googleApiClient.connect();
-    }
-
-    @Override
     public int onStartCommand(Intent intent, int flags, int startId){
+        googleApiClient.connect();
         return START_NOT_STICKY;
     }
 
     @Override
     public IBinder onBind(Intent intent) {
-        startService();
-        return updateBinder;
+        return null;
     }
 
-    //public binder class
-    public class UpdateBinder extends Binder {
-        public LocationService getService() {
-            return LocationService.this;
-        }
+    @Override
+    public boolean onUnbind(Intent intent) {
+        return super.onUnbind(intent);
+    }
+
+    @Override
+    public void onDestroy(){
+        super.onDestroy();
+        googleApiClient.disconnect();
     }
 
     @Override
@@ -123,27 +97,15 @@ public class LocationService extends Service implements GoogleApiClient.Connecti
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.d("mztag", "onLocationChanged");
-        processLocation(location);
-    }
-
-
-    private void processLocation(Location location){
         double lat = location.getLatitude();
         double lon = location.getLongitude();
 
-        if (lat != lastLatLng.latitude || lon != lastLatLng.longitude){
-            //create new LatLng
-            LatLng newLatLng = new LatLng(lat, lon);
-            lastLatLng = newLatLng;
-
-            //create update intent
-            //send data to activity
-            Intent local = new Intent();
-            local.putExtra(LATITUDE_KEY, lat);
-            local.putExtra(LONGITUDE_KEY, lon);
-            local.setAction(UPDATE_LOCATION_ACTION);
-            this.sendBroadcast(local);
-        }
+        //create update intent
+        //send data to activity
+        Intent local = new Intent();
+        local.putExtra(LATITUDE_KEY, lat);
+        local.putExtra(LONGITUDE_KEY, lon);
+        local.setAction(UPDATE_LOCATION_ACTION);
+        sendBroadcast(local);
     }
 }

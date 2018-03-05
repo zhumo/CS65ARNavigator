@@ -21,19 +21,16 @@ public class DirectionsParser {
     /**
      * Returns a list of lists containing latitude and longitude from a JSONObject
      */
-    public List<List<HashMap<String, String>>> parse(JSONObject jObject) {
+    public List<List<HashMap<String, String>>> parse(JSONArray routeJSON) {
 
         List<List<HashMap<String, String>>> routes = new ArrayList<List<HashMap<String, String>>>();
-        JSONArray jRoutes = null;
         JSONArray jLegs = null;
         JSONArray jSteps = null;
 
         try {
-            jRoutes = jObject.getJSONArray("routes");
-
             // Loop for all routes
-            for (int i = 0; i < jRoutes.length(); i++) {
-                jLegs = ((JSONObject) jRoutes.get(i)).getJSONArray("legs");
+            for (int i = 0; i < routeJSON.length(); i++) {
+                jLegs = ((JSONObject) routeJSON.get(i)).getJSONArray("legs");
                 List path = new ArrayList<HashMap<String, String>>();
 
                 //Loop for all legs
