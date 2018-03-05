@@ -1,3 +1,5 @@
+// Taken from javax.vecmath
+
 package edu.dartmouth.com.arnavigation.math;
 
 import java.io.Serializable;

@@ -14,6 +14,8 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 
+import edu.dartmouth.com.arnavigation.math.Ray;
+
 public class NearbyPlace {
     public double latitude;
     public double longitude;
@@ -26,6 +28,8 @@ public class NearbyPlace {
     public int photoHeight;
     public int photoWidth;
     public Bitmap imageBitmap;
+
+    public Pose pose;
 
     public NearbyPlace(JSONObject placeData) {
         try {
@@ -53,43 +57,51 @@ public class NearbyPlace {
     private float[] translationMatrix = new float[3];
     private final float[] rotationMatrix = new float[] {0f,0f,0f,0f}; // We don't need to rotate the place marker.
     public Pose getPose(LatLng startLatLng, float heading) {
-        Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
-        float distance = distanceResults[0];
-        float bearing = distanceResults[1];
-        float angle = bearing - heading;
-        float angleInRads = (float) Math.toRadians((double) angle);
+        if (pose == null) {
+            Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
+            float distance = distanceResults[0];
+            float bearing = distanceResults[1];
+            float angle = bearing - heading;
+            float angleInRads = (float) Math.toRadians((double) angle);
 
-        float xPos = (float) Math.cos(angleInRads) * distance;
-        if(xPos > 3.0f) {
-            xPos = 3.0f;
-        } else if(xPos < -3.0f) {
-            xPos = -3.0f;
-        }
-        float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
-        if(zPos > 3.0f) {
-            zPos = 3.0f;
-        } else if(zPos < -3.0f) {
-            zPos = -3.0f;
-        }
-        translationMatrix[0] = xPos;
-        translationMatrix[1] = 0.0f;
-        translationMatrix[2] = zPos;
+            float xPos = (float) Math.cos(angleInRads) * distance;
+            if (xPos > 3.0f) {
+                xPos = 3.0f;
+            } else if (xPos < -3.0f) {
+                xPos = -3.0f;
+            }
+            float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
+            if (zPos > 3.0f) {
+                zPos = 3.0f;
+            } else if (zPos < -3.0f) {
+                zPos = -3.0f;
+            }
+            translationMatrix[0] = xPos;
+            translationMatrix[1] = 0.0f;
+            translationMatrix[2] = zPos;
 
-        return new Pose(translationMatrix, rotationMatrix);
+            pose = new Pose(translationMatrix, rotationMatrix);
+        }
+
+        return pose;
     }
 
     private static float TOLERANCE = 0.5f;
-    public boolean isTapped(float[] worldCoordinates) {
-        float tappedXLoc = worldCoordinates[0];
-        float tappedYLoc = worldCoordinates[1];
+    public boolean isTapped(Ray tappedRay) {
+        tappedRay.direction.scale(pose.tz());
+        tappedRay.origin.add(tappedRay.direction);
 
-        float xLowerBound = translationMatrix[0] - TOLERANCE;
-        float xUpperBound = translationMatrix[0] + TOLERANCE;
-        float yLowerBound = translationMatrix[1] - TOLERANCE;
-        float yUpperBound = translationMatrix[1] + TOLERANCE;
+        Log.d("mztag", "Pose: " + pose.toString());
+        Log.d("mztag", "Projected Ray Origin: (" + tappedRay.origin.x + ", " + tappedRay.origin.y + ", " + tappedRay.origin.z + ")");
+        Log.d("mztag", "Projected Ray Direction: (" + tappedRay.direction.x + ", " + tappedRay.direction.y + ", " + tappedRay.direction.z + ")");
 
-        boolean withinX = tappedXLoc < xUpperBound && tappedXLoc > xLowerBound;
-        boolean withinY = tappedYLoc < yUpperBound && tappedYLoc > yLowerBound;
+        float xLowerBound = pose.tx() - TOLERANCE;
+        float xUpperBound = pose.tx() + TOLERANCE;
+        float yLowerBound = pose.ty() - TOLERANCE;
+        float yUpperBound = pose.ty() + TOLERANCE;
+
+        boolean withinX = tappedRay.origin.x < xUpperBound && tappedRay.origin.x > xLowerBound;
+        boolean withinY = tappedRay.origin.y < yUpperBound && tappedRay.origin.y > yLowerBound;
 
         return withinX && withinY;
     }

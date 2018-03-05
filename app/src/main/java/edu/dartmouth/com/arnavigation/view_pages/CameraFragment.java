@@ -71,6 +71,9 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import static android.content.Context.SENSOR_SERVICE;
+import edu.dartmouth.com.arnavigation.TouchHelper;
+import edu.dartmouth.com.arnavigation.math.Ray;
+import edu.dartmouth.com.arnavigation.math.Vector2f;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
@@ -376,30 +379,44 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 float tappedXLoc = tap.getX();
                 float tappedYLoc = tap.getY();
 
-                float[] worldCoords = screenPointToWorldRay(tappedXLoc, tappedYLoc, camera);
-//                Log.d("mztag", "screen2World: (" +
-//                        worldCoords[0] + ", " +
-//                        worldCoords[1] + ", " +
-//                        worldCoords[2] + ", " +
-//                        worldCoords[3] + ", " +
-//                        worldCoords[4] + ", " +
-//                        worldCoords[5] + ", " +
-//                        ")"
-//                );
+                // Get projection matrix.
+                float[] projmtx = new float[16];
+                camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+
+                // Get camera matrix and draw.
+                float[] viewmtx = new float[16];
+                camera.getViewMatrix(viewmtx, 0);
+
+                for(Anchor anchor : mAnchors) {
+                    Ray tappedRay = TouchHelper.projectRay(
+                            new Vector2f(tappedXLoc, tappedYLoc),
+                            mSurfaceView.getMeasuredWidth(),
+                            mSurfaceView.getMeasuredHeight(),
+                            projmtx, viewmtx
+                    );
+
+                    Pose pose = anchor.getPose();
+                    float scaleFactor = (float) Math.sqrt(pose.tz() * pose.tz() + pose.tx() * pose.tx());
+                    tappedRay.direction.scale(-1.0f * scaleFactor);
+                    tappedRay.origin.add(tappedRay.direction);
+
+                    Log.d("mztag", "Pose: " + pose.toString());
+                    Log.d("mztag", "Projected Ray Origin: (" + tappedRay.origin.x + ", " + tappedRay.origin.y + ", " + tappedRay.origin.z + ")");
+                    Log.d("mztag", "Projected Ray Direction: (" + tappedRay.direction.x + ", " + tappedRay.direction.y + ", " + tappedRay.direction.z + ")");
+                }
 
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
-                    // The screen to world conversion isn't working right now. So coerce to false.
-                    if (false && nearbyPlace.isTapped(worldCoords)) {
-                        Intent placeDetailsIntent = new Intent(getContext(), PlaceDetailsActivity.class);
-                        placeDetailsIntent.putExtra(PlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
-                        placeDetailsIntent.putExtra("name", nearbyPlace.name);
-                        startActivity(placeDetailsIntent);
-                        // Raycasting may determine that multiple objects were tapped,
-                        // esp. when objects are behind one another. Therefore, we take the first one and
-                        // assume the user meant to tap it.
-                        // TODO: ideally, this would figure out the nearest one (based on z translation).
-                        break;
-                    }
+//                     The screen to world conversion isn't working right now. So coerce to false.
+//                    if (nearbyPlace.isTapped(tappedRay)) {
+//                        // TODO: ideally, this would figure out the nearest one (based on z translation).
+//                        Log.d("mztag", "tapped!");
+////                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
+//
+//                        // Raycasting may determine that multiple objects were tapped,
+//                        // esp. when objects are behind one another. Therefore, we take the first one and
+//                        // assume the user meant to tap it.
+//                        break;
+//                    }
                 }
 
                 // Randomly select one, because raycasting doesn't work right now.
@@ -413,11 +430,26 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
             if(nearbyPlacesChanged) {
                 mAnchors.clear();
-                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
-                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
-                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
-                    mAnchors.add(nearbyPlaceAnchor);
-                }
+//                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
+//                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
+//                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
+//                    mAnchors.add(nearbyPlaceAnchor);
+//                }
+
+                // Use this when you need a test object right in front of you.
+                Pose pose = new Pose(
+                    new float[] {0.0f, 0.0f, -1.0f},
+                    new float[] {0.0f, 0.0f, 0.0f, 1.0f}
+                );
+                Anchor testAnchor = mSession.createAnchor(pose);
+                mAnchors.add(testAnchor);
+
+                Pose pose2 = new Pose(
+                        new float[] {1.0f, 0.0f, 0.0f},
+                        new float[] {0.0f, 0.0f, 0.0f, 1.0f}
+                );
+                Anchor testAnchor2 = mSession.createAnchor(pose2);
+                mAnchors.add(testAnchor2);
 
                 nearbyPlacesChanged = false;
             }
@@ -686,5 +718,4 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 translatedClip[0], translatedClip[1], translatedClip[2], translatedClip[3]
         };
     }
-
 }
