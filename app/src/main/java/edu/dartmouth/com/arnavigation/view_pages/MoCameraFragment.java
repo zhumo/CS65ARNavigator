@@ -39,6 +39,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
@@ -70,6 +71,7 @@ import edu.dartmouth.com.arnavigation.NearbyPlaceDetailsActivity;
 import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
+import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 
@@ -101,8 +103,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private LatLng mDestination;
     private float mHeading;
 
-    private List<NearbyPlace> nearbyPlaces;
-
     private float[] PLACE_MARKER_COLOR = new float[] {46, 194, 138, 1};
 
     private SensorManager sensorManager;
@@ -113,6 +113,22 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private boolean hasGravityData = false;
     private boolean hasGeomagneticData = false;
     private double rotationInDegrees;
+
+    private PlacesManager placesManager = PlacesManager.getInstance();
+
+    private PlacesManager.OnPostRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostRequest() {
+        @Override
+        public void onSuccessfulRequest() { nearbyPlacesChanged = true; }
+
+        @Override
+        public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Nearby Places Error");
+            builder.setMessage(errorMessage);
+            builder.setPositiveButton("OK", null);
+            builder.show();
+        }
+    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -234,48 +250,10 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
     }
 
-    private void getNearbyPlaces() {
-        new GetNearbyPlacesRequest(new GetNearbyPlacesRequest.OnPostExecute() {
-            @Override
-            public void onPostExecute(JSONObject responseJSON) {
-            try {
-                // Use these to debug the HTTP requests
-                // Log.d("mztag", "Status: " + responseJSON.getString("status"));
-                // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
-                if (responseJSON.getString("status").equals("OK")) {
-                    JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
-
-                    nearbyPlaces = new ArrayList<>();
-                    for (int i = 0; i < nearbyPlacesJSON.length(); i++) {
-                        JSONObject nearbyPlaceJSON = nearbyPlacesJSON.getJSONObject(i);
-                        NearbyPlace nearbyPlace = new NearbyPlace(nearbyPlaceJSON);
-                        nearbyPlaces.add(nearbyPlace);
-                    }
-
-                    nearbyPlacesChanged = true;
-                } else {
-                    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                    builder.setTitle("Nearby Places Error");
-                    builder.setMessage(responseJSON.getString("error_message"));
-                    builder.setPositiveButton("OK", null);
-                    builder.show();
-                }
-            } catch (JSONException e) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                builder.setTitle("Nearby Places Error");
-                builder.setMessage("Could not load nearby places");
-                builder.setPositiveButton("OK", null);
-                builder.show();
-                e.printStackTrace();
-            }
-            }
-        }).execute(mUserLatLng);
-    }
-
     public void setUserLocation(LatLng newLatLng) {
         if (mUserLatLng == null && newLatLng != null) {
             mUserLatLng = newLatLng;
-            getNearbyPlaces();
+            placesManager.getNearbyPlaces(mUserLatLng, receiveNearbyPlacesResponseListener);
         } else {
             mUserLatLng = newLatLng;
         }
@@ -349,7 +327,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                         ")"
                 );
 
-                for(NearbyPlace nearbyPlace : nearbyPlaces) {
+                for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
                     // The screen to world conversion isn't working right now. So coerce to false.
                     if (false && nearbyPlace.isTapped(worldCoords)) {
                         Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
@@ -365,8 +343,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 }
 
                 // Randomly select one, because raycasting doesn't work right now.
-                int placeIndex = (int) (Math.floor(nearbyPlaces.size() * Math.random()));
-                NearbyPlace nearbyPlace = nearbyPlaces.get(placeIndex);
+                int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
+                NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
                 Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
                 placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
                 placeDetailsIntent.putExtra("name", nearbyPlace.name);
@@ -378,8 +356,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 
             if(nearbyPlacesChanged) {
                 mAnchors.clear();
-                for (int i = 0; i < nearbyPlaces.size(); i++) {
-                    NearbyPlace nearbyPlace = nearbyPlaces.get(i);
+                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
                     Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
                     Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
                     mAnchors.add(nearbyPlaceAnchor);
