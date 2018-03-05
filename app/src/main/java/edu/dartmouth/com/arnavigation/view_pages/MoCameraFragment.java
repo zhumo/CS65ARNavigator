@@ -133,6 +133,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         public void onSuccessfulRequest(NearbyPlace nearbyPlace) {
             Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
             placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
             startActivity(placeDetailsIntent);
         }
 
