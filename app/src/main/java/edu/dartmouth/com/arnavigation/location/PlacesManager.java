@@ -1,7 +1,5 @@
 package edu.dartmouth.com.arnavigation.location;
 
-import android.support.v7.app.AlertDialog;
-
 import com.google.android.gms.maps.model.LatLng;
 
 import org.json.JSONArray;
@@ -62,30 +60,10 @@ public class PlacesManager {
     }
 
     public void getPlaceDetails(final NearbyPlace place, final OnPostPlaceDetailsRequest onPostRequestListener) {
-        new GetPlaceDetailsRequest(new GetPlaceDetailsRequest.OnPostExecute() {
+        new GetPlacePhotoRequest(new GetPlacePhotoRequest.OnPostExecute() {
             @Override
-            public void onPostExecute(JSONObject responseJSON) {
-                try {
-                    // Use these to debug the HTTP requests
-                    // Log.d("mztag", "Status: " + responseJSON.getString("status"));
-                    // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
-                    if (responseJSON.getString("status").equals("OK")) {
-                        JSONObject placeJSON = responseJSON.getJSONObject("result");
-                        place.updateAttributes(placeJSON);
-
-                        onPostRequestListener.onSuccessfulRequest(place);
-                    } else {
-                        onPostRequestListener.onUnsuccessfulRequest(
-                                responseJSON.getString("status"),
-                                responseJSON.getString("error_message")
-                        );
-                    }
-                } catch (JSONException e) {
-                    onPostRequestListener.onUnsuccessfulRequest(
-                            "JSON_ERROR",
-                            "Could not load nearby places"
-                    );
-                }
+            public void onPostExecute(Boolean success) {
+                onPostRequestListener.onSuccessfulRequest(place);
             }
         }).execute(place);
     }

@@ -1,5 +1,6 @@
 package edu.dartmouth.com.arnavigation.location;
 
+import android.graphics.Bitmap;
 import android.location.Location;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -7,6 +8,7 @@ import android.view.MotionEvent;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Pose;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -15,11 +17,15 @@ import java.util.HashMap;
 public class NearbyPlace {
     public double latitude;
     public double longitude;
-    public String iconUrl;
     public String name;
     public String placeId;
     public String vicinity;
-    public String formattedAddress;
+
+    public String iconUrl;
+    public String photoReference;
+    public int photoHeight;
+    public int photoWidth;
+    public Bitmap imageBitmap;
 
     public NearbyPlace(JSONObject placeData) {
         try {
@@ -31,6 +37,11 @@ public class NearbyPlace {
             name = placeData.getString("name");
             placeId = placeData.getString("place_id");
             vicinity = placeData.getString("vicinity");
+            JSONArray photos = placeData.getJSONArray("photos");
+            JSONObject photo = photos.getJSONObject(0);
+            photoReference = photo.getString("photo_reference");
+            photoHeight = photo.getInt("height");
+            photoWidth = photo.getInt("width");
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -81,11 +92,5 @@ public class NearbyPlace {
         boolean withinY = tappedYLoc < yUpperBound && tappedYLoc > yLowerBound;
 
         return withinX && withinY;
-    }
-
-    public void updateAttributes(JSONObject attributesJSON) {
-        try {
-            formattedAddress = attributesJSON.getString("formatted_address");
-        } catch (JSONException e) { e.printStackTrace(); }
     }
 }
