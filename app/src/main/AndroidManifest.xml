@@ -56,6 +56,9 @@
             android:name=".permissions.PermissionsActivity"
             android:screenOrientation="portrait"
             android:label="@string/title_activity_permissions" />
+        <activity android:name=".NearbyPlaceDetailsActivity"
+            android:screenOrientation="portrait"
+            android:label="@string/title_activity_nearby_place_details"/>
 
         <service
             android:name=".location.LocationService"
