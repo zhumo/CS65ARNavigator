@@ -25,6 +25,7 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
+import android.opengl.Matrix;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -39,17 +40,13 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.nearby.Nearby;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
 import com.google.ar.core.HitResult;
-import com.google.ar.core.Plane;
-import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
-import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
@@ -69,14 +66,12 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
+import edu.dartmouth.com.arnavigation.NearbyPlaceDetailsActivity;
 import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
-import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
-import edu.dartmouth.com.arnavigation.renderers.PlaneRenderer;
-import edu.dartmouth.com.arnavigation.renderers.PointCloudRenderer;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
@@ -337,18 +332,33 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
+
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
-//                for (HitResult hit : frame.hitTest(tap)) {
-//                    // TODO: Check whether marker was tapped.
-//                    Trackable trackable = hit.getTrackable();
-//                    if (trackable instanceof Plane && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
-//                    }
-//
-//                    mAnchors.add(hit.createAnchor());
-//                    // Hits are sorted by depth. Consider only closest hit on a plane.
-//                    break;
-//                }
+                float tappedXLoc = tap.getX();
+                float tappedYLoc = tap.getY();
+
+                float[] worldCoords = screenPointToWorldRay(tappedXLoc, tappedYLoc, camera);
+                Log.d("mztag", "screen2World: (" +
+                        worldCoords[0] + ", " +
+                        worldCoords[1] + ", " +
+                        worldCoords[2] + ", " +
+                        worldCoords[3] + ", " +
+                        worldCoords[4] + ", " +
+                        worldCoords[5] + ", " +
+                        ")"
+                );
+
+                for(NearbyPlace nearbyPlace : nearbyPlaces) {
+                    // The screen to world conversion isn't working right now. So coerce to false.
+                    if (false && nearbyPlace.isTapped(worldCoords)) {
+                        Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
+                        placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+                        placeDetailsIntent.putExtra("name", nearbyPlace.name);
+                        startActivity(placeDetailsIntent);
+                        break;
+                    }
+                }
             }
 
             // Draw background.
@@ -358,22 +368,10 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 mAnchors.clear();
                 for (int i = 0; i < nearbyPlaces.size(); i++) {
                     NearbyPlace nearbyPlace = nearbyPlaces.get(i);
-                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading, i);
+                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
                     Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
                     mAnchors.add(nearbyPlaceAnchor);
                 }
-
-//                NearbyPlace nearbyPlace = nearbyPlaces.get(0);
-//                Log.d("mztag", "Place: " + nearbyPlace.name);
-//                Log.d("mztag", "Current Loc: " + mUserLatLng.toString());
-//                Log.d("mztag", "Current Heading: " + mHeading);
-//                Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
-//                Pose poseForNearbyPlace = new Pose(
-//                        new float[] {1.0f, 0.0f, -1.0f},
-//                        new float[] {0.0f, 0.0f, 0.0f, 0.0f}
-//                );
-//                Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
-//                mAnchors.add(nearbyPlaceAnchor);
 
                 nearbyPlacesChanged = false;
             }
@@ -486,4 +484,47 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) { /* NOOP */ }
+
+    // from: https://github.com/google-ar/arcore-android-sdk/issues/147
+    private float[] screenPointToWorldRay(float xPx, float yPx, Camera camera) {
+        float[] clip = new float[4];  // {clip query, camera query, camera origin}
+        // Set up the clip-space coordinates of our query point
+        // +x is right:
+        clip[0] = 2.0f * xPx / mSurfaceView.getMeasuredWidth() - 1.0f;
+        // +y is up (android UI Y is down):
+        clip[1] = 1.0f - 2.0f * yPx / mSurfaceView.getMeasuredHeight();
+        clip[2] = 1.0f; // +z is forwards (remember clip, not camera)
+        clip[3] = 1.0f; // w (homogenous coordinates)
+
+        float[] origin = new float[] {0, 0, 0, 1};
+
+        // Get projection matrix.
+        float[] projmtx = new float[16];
+        camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+        if(!Matrix.invertM(projmtx, 0, projmtx, 0)) {
+            throw new RuntimeException("InverseProjMatrix failed");
+        }
+
+        // Get camera matrix and draw.
+        float[] viewmtx = new float[16];
+        camera.getViewMatrix(viewmtx, 0);
+        if(!Matrix.invertM(viewmtx, 0, viewmtx, 0)) {
+            throw new RuntimeException("InverseViewMatrix failed");
+        }
+
+        float[] matrix = new float[16];
+        Matrix.multiplyMM(matrix, 0, viewmtx, 0, projmtx, 0);
+
+        float[] translatedOrigin = new float[4];
+        Matrix.multiplyMV(translatedOrigin, 0, matrix, 0, origin, 0);
+
+        float[] translatedClip = new float[4];
+        Matrix.multiplyMV(translatedClip, 0, matrix, 0, clip, 0);
+
+        return new float[] {
+            translatedOrigin[0], translatedOrigin[1], translatedOrigin[2], translatedOrigin[3],
+            translatedClip[0], translatedClip[1], translatedClip[2], translatedClip[3]
+        };
+    }
+
 }

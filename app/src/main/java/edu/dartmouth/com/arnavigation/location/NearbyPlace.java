@@ -2,6 +2,7 @@ package edu.dartmouth.com.arnavigation.location;
 
 import android.location.Location;
 import android.util.Log;
+import android.view.MotionEvent;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Pose;
@@ -39,7 +40,7 @@ public class NearbyPlace {
     private float[] distanceResults = new float[3];
     private float[] translationMatrix = new float[3];
     private final float[] rotationMatrix = new float[] {0f,0f,0f,0f}; // We don't need to rotate the place marker.
-    public Pose getPose(LatLng startLatLng, float heading, int n) {
+    public Pose getPose(LatLng startLatLng, float heading) {
         Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
         float distance = distanceResults[0];
         float bearing = distanceResults[1];
@@ -63,5 +64,21 @@ public class NearbyPlace {
         translationMatrix[2] = zPos;
 
         return new Pose(translationMatrix, rotationMatrix);
+    }
+
+    private static float TOLERANCE = 0.5f;
+    public boolean isTapped(float[] worldCoordinates) {
+        float tappedXLoc = worldCoordinates[0];
+        float tappedYLoc = worldCoordinates[1];
+
+        float xLowerBound = translationMatrix[0] - TOLERANCE;
+        float xUpperBound = translationMatrix[0] + TOLERANCE;
+        float yLowerBound = translationMatrix[1] - TOLERANCE;
+        float yUpperBound = translationMatrix[1] + TOLERANCE;
+
+        boolean withinX = tappedXLoc < xUpperBound && tappedXLoc > xLowerBound;
+        boolean withinY = tappedYLoc < yUpperBound && tappedYLoc > yLowerBound;
+
+        return withinX && withinY;
     }
 }
