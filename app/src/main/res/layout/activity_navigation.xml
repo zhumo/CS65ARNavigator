@@ -10,6 +10,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+
+
     <LinearLayout
         android:id="@+id/destination_search"
         android:layout_width="match_parent"
@@ -20,13 +22,11 @@
         android:layout_marginEnd="@dimen/button_margins"
         android:orientation="horizontal">
 
-        <EditText
-            android:id="@+id/locationSearchText"
+        <fragment
+            android:id="@+id/place_autocomplete_fragment"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:hint="Destination"
-            android:inputType="textPostalAddress" />
+            android:layout_height="wrap_content"
+            android:name="com.google.android.gms.location.places.ui.PlaceAutocompleteFragment" />
 
         <Button
             android:id="@+id/searchButton"

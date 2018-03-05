@@ -84,6 +84,8 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
+
+        setZoom(mUserLatLng);
     }
 
     private void zoomToUser() { zoomTo(mUserLatLng); }
@@ -158,21 +160,23 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
-        if (path.size() > 0) {
-            //get last position latlng
-            int lastPathIndex = path.size() - 1;
-            List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
-            int lastPointIndex = lastPath.size() - 1;
-            HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
-            mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
-                    Double.parseDouble(lastPointHashMap.get("lon")));
 
+        if (path != null) {
+            if (path.size() > 0) {
 
-            //run polyline task
-            new ParseMapDirectionsTask().execute(path);
-        }
-        else {
-            mDestination = mUserLatLng;
+                //get last position latlng
+                int lastPathIndex = path.size() - 1;
+                List<HashMap<String, String>> lastPath = path.get(lastPathIndex);
+                int lastPointIndex = lastPath.size() - 1;
+                HashMap<String, String> lastPointHashMap = lastPath.get(lastPointIndex);
+                mDestination = new LatLng(Double.parseDouble(lastPointHashMap.get("lat")),
+                        Double.parseDouble(lastPointHashMap.get("lon")));
+
+                //run polyline task
+                new ParseMapDirectionsTask().execute(path);
+            } else {
+                mDestination = mUserLatLng;
+            }
         }
     }
 

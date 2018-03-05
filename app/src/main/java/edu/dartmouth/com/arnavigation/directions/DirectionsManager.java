@@ -188,13 +188,15 @@ public class DirectionsManager {
                 } catch (JSONException je) {
                     je.printStackTrace();
                 }
-
+              
                 return routes;
             }
 
             @Override
             protected void onPostExecute(List<List<HashMap<String, String>>> paths) {
-                setPaths(paths);
+                if (routes != null) {
+                    setPaths(paths);
+                }
 
                 Intent intent = new Intent();
                 intent.setAction(DIRECTIONS_RESULTS_ACTION);
