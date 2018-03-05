@@ -58,7 +58,7 @@ public class NavigationActivity extends AppCompatActivity {
 
     NonSwipingViewPager viewPager;
 
-    MoCameraFragment cameraFragment = new MoCameraFragment();
+    CameraFragment cameraFragment = new CameraFragment();
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
     BroadcastReceiver newDirectionsReceiver;
@@ -160,6 +160,8 @@ public class NavigationActivity extends AppCompatActivity {
             public void onPlaceSelected(Place place) {
                 Log.d("PLACE", "Place: " + place.getName());
                 placeAddress = place.getAddress().toString();
+                //pass to DirectionsManager address function
+                directionsManager.getDirectionsWithAddress(currentLatLng, placeAddress);
             }
 
             @Override

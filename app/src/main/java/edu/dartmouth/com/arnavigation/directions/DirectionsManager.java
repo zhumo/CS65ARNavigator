@@ -194,7 +194,7 @@ public class DirectionsManager {
 
             @Override
             protected void onPostExecute(List<List<HashMap<String, String>>> paths) {
-                if (routes != null) {
+                if (paths != null) {
                     setPaths(paths);
                 }
 

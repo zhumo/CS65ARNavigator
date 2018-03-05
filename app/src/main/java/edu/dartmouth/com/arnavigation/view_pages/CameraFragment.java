@@ -16,6 +16,7 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -31,6 +32,7 @@ import android.support.annotation.Nullable;
 import android.support.design.widget.BaseTransientBottomBar;
 import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
+import android.support.v7.app.AlertDialog;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.LayoutInflater;
@@ -53,8 +55,11 @@ import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
+import edu.dartmouth.com.arnavigation.NearbyPlaceDetailsActivity;
 import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.directions.LegObject;
+import edu.dartmouth.com.arnavigation.location.NearbyPlace;
+import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.Line;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
@@ -132,10 +137,15 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private ArrayList<LegObject> legs;
     LegObject leg;
     private ArrayList<Line> lines;
+    private Anchor lineAnchor;
+    private final float[] lineAnchorMatrix = new float[16];
+
     private Line lineRenderer = new Line();
     private Triangle triangle = new Triangle();
 
     private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
+    private boolean isLineRendered = false;
+    private boolean nearbyPlacesChanged = false;
 
 
     //for getting heading using accelerometer and magnetometer
@@ -148,6 +158,39 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private boolean hasGeomagneticData = false;
     private double rotationInDegrees;
 
+    private PlacesManager placesManager = PlacesManager.getInstance();
+    private PlacesManager.OnPostNearbyPlacesRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostNearbyPlacesRequest() {
+        @Override
+        public void onSuccessfulRequest() { nearbyPlacesChanged = true; }
+
+        @Override
+        public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Nearby Places Error");
+            builder.setMessage(errorMessage);
+            builder.setPositiveButton("OK", null);
+            builder.show();
+        }
+    };
+    private PlacesManager.OnPostPlaceDetailsRequest receivePlaceDetailsResponseListener = new PlacesManager.OnPostPlaceDetailsRequest() {
+        @Override
+        public void onSuccessfulRequest(NearbyPlace nearbyPlace) {
+            Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
+            startActivity(placeDetailsIntent);
+        }
+
+        @Override
+        public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Nearby Places Error");
+            builder.setMessage(errorMessage);
+            builder.setPositiveButton("OK", null);
+            builder.show();
+        }
+    };
 
 
     @Override
@@ -246,6 +289,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
+
+        // Cause fragment to redraw the nearby places, since drawn objects are not saved on pause.
+        nearbyPlacesChanged = true;
     }
 
     @Override
@@ -293,13 +339,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
         // Prepare the other rendering objects.
         try {
-            mVirtualObject.createOnGlThread(getContext(), "tinker.obj", "andy.png");
+            mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
 
-            mVirtualObjectShadow.createOnGlThread(getContext(),
-                    "andy_shadow.obj", "andy_shadow.png");
-            mVirtualObjectShadow.setBlendMode(BlendMode.Shadow);
-            mVirtualObjectShadow.setMaterialProperties(1.0f, 0.0f, 0.0f, 1.0f);
         } catch (IOException e) {
             Log.e(TAG, "Failed to read obj file");
         }
@@ -310,7 +352,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         }
         mPointCloud.createOnGlThread(getContext());
 
-        triangle.createOnGLThread(getContext());
+        triangle.createOnGlThread(getContext());
 
         lineRenderer.createOnGLThread(PATH_COLOR, getContext());
         //lineRenderer = new Line(PATH_COLOR);
@@ -374,65 +416,45 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
-//                for (HitResult hit : frame.hitTest(tap)) {
-//                    // Check if any plane was hit, and if it was hit inside the plane polygon
-//                    Trackable trackable = hit.getTrackable();
-//                    if (trackable instanceof Plane
-//                            && ((Plane) trackable).isPoseInPolygon(hit.getHitPose())) {
-//                        // Cap the number of objects created. This avoids overloading both the
-//                        // rendering system and ARCore.
-//                        if (mAnchors.size() >= 20) {
-//                            mAnchors.get(0).detach();
-//                            mAnchors.remove(0);
-//                        }
-//                        // Adding an Anchor tells ARCore that it should track this position in
-//                        // space. This anchor is created on the Plane to place the 3d model
-//                        // in the correct position relative both to the world and to the plane.
-//                        mAnchors.add(hit.createAnchor());
-//
-//                        // Hits are sorted by depth. Consider only closest hit on a plane.
-//                        break;
-//                    }
-//                }
+                float tappedXLoc = tap.getX();
+                float tappedYLoc = tap.getY();
 
-//                if (mAnchors.size() >= 1) {
-//                    mAnchors.get(0).detach();
-//                    mAnchors.remove(0);
-//                }
-//                mAnchors.add(mSession.createAnchor(
-//                        frame.getCamera().getPose().compose(Pose.makeTranslation(0, 0, -0.1f).extractTranslation())));
-                        //frame.getCamera().getPose().compose(Pose.makeRotation(0, 180, 90, 0).extractRotation())));
+                float[] worldCoords = screenPointToWorldRay(tappedXLoc, tappedYLoc, camera);
+//                Log.d("mztag", "screen2World: (" +
+//                        worldCoords[0] + ", " +
+//                        worldCoords[1] + ", " +
+//                        worldCoords[2] + ", " +
+//                        worldCoords[3] + ", " +
+//                        worldCoords[4] + ", " +
+//                        worldCoords[5] + ", " +
+//                        ")"
+//                );
+
+                for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
+                    // The screen to world conversion isn't working right now. So coerce to false.
+                    if (false && nearbyPlace.isTapped(worldCoords)) {
+                        Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
+                        placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+                        placeDetailsIntent.putExtra("name", nearbyPlace.name);
+                        startActivity(placeDetailsIntent);
+                        // Raycasting may determine that multiple objects were tapped,
+                        // esp. when objects are behind one another. Therefore, we take the first one and
+                        // assume the user meant to tap it.
+                        // TODO: ideally, this would figure out the nearest one (based on z translation).
+                        break;
+                    }
+                }
+
+                // Randomly select one, because raycasting doesn't work right now.
+                int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
+                NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
+                placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
             }
 
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
             if (isLineCreated == true){
-
-//                LatLng firstLoc = leg.getPoints()[0];
-//                float[] results = new float[2];
-//
-//                Location.distanceBetween(mUserLatLng.latitude, mUserLatLng.longitude, firstLoc.latitude, firstLoc.latitude, results);
-//
-//                float bearing = results[1];
-//                float bearing360 = (((bearing % 360) + 360) % 360);
-//
-//                double offset = (double)bearing360 - mHeading;
-//                offset = (((offset % 360) + 360) % 360);
-//
-//                double offsetRadians = offset * Math.PI / 180;
-//                float xRot = 0;
-//                float yRot = (float)Math.sin(offsetRadians/2);
-//                float zRot = 0;
-//                float wRot = (float)Math.cos(offsetRadians/2);
-//
-//                Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360 + " offset: " + offset + " offsetRadians: " + offsetRadians);
-//
-//                Log.d("PATH_POSE", "xRot: " + xRot + " yRot: " + yRot + " zRot: " + zRot + " wRot: " + wRot);
-//
-//                float quaternionProof = (xRot * xRot) + (yRot * yRot) + (zRot * zRot) + (wRot * wRot);
-//                Log.d("QUATERNION_PROOF", "This value should equal 1: " + quaternionProof);
-//
 
                 Pose cameraPose = camera.getPose();
 
@@ -445,13 +467,15 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
                 //add anchor
-                mAnchors.add(mSession.createAnchor(newPose));
+                lineAnchor = mSession.createAnchor(newPose);
 
                         //frame.getCamera().getPose().compose(Pose.makeRotation(xRot, yRot, zRot, wRot).extractRotation())));
 
                 //mAnchors.add(mSession.createAnchor(leg.getLegPose()));
 
                 isLineCreated = false; //set false so only one anchor at a time
+
+                isLineRendered = true;
             }
 
 
@@ -516,19 +540,22 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 // during calls to session.update() as ARCore refines its estimate of the world.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
-                lineRenderer.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
+                mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
+
 
                 //triangle.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 //triangle.draw(viewmtx, projmtx, lightIntensity);
 
-                // Update and draw the model and its shadow.
-                //mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                //mVirtualObjectShadow.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                //mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
-                //mVirtualObjectShadow.draw(viewmtx, projmtx, lightIntensity);
             }
 
+
+            //draw line with its anchor
+            if (isLineRendered) {
+                lineAnchor.getPose().toMatrix(lineAnchorMatrix, 0);
+                lineRenderer.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
+            }
 
 
         } catch (Throwable t) {
@@ -710,5 +737,46 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     }
 
+    // from: https://github.com/google-ar/arcore-android-sdk/issues/147
+    private float[] screenPointToWorldRay(float xPx, float yPx, Camera camera) {
+        float[] clip = new float[4];  // {clip query, camera query, camera origin}
+        // Set up the clip-space coordinates of our query point
+        // +x is right:
+        clip[0] = 2.0f * xPx / mSurfaceView.getMeasuredWidth() - 1.0f;
+        // +y is up (android UI Y is down):
+        clip[1] = 1.0f - 2.0f * yPx / mSurfaceView.getMeasuredHeight();
+        clip[2] = 1.0f; // +z is forwards (remember clip, not camera)
+        clip[3] = 1.0f; // w (homogenous coordinates)
+
+        float[] origin = new float[] {0, 0, 0, 1};
+
+        // Get projection matrix.
+        float[] projmtx = new float[16];
+        camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+        if(!Matrix.invertM(projmtx, 0, projmtx, 0)) {
+            throw new RuntimeException("InverseProjMatrix failed");
+        }
+
+        // Get camera matrix and draw.
+        float[] viewmtx = new float[16];
+        camera.getViewMatrix(viewmtx, 0);
+        if(!Matrix.invertM(viewmtx, 0, viewmtx, 0)) {
+            throw new RuntimeException("InverseViewMatrix failed");
+        }
+
+        float[] matrix = new float[16];
+        Matrix.multiplyMM(matrix, 0, viewmtx, 0, projmtx, 0);
+
+        float[] translatedOrigin = new float[4];
+        Matrix.multiplyMV(translatedOrigin, 0, matrix, 0, origin, 0);
+
+        float[] translatedClip = new float[4];
+        Matrix.multiplyMV(translatedClip, 0, matrix, 0, clip, 0);
+
+        return new float[] {
+                translatedOrigin[0], translatedOrigin[1], translatedOrigin[2], translatedOrigin[3],
+                translatedClip[0], translatedClip[1], translatedClip[2], translatedClip[3]
+        };
+    }
 
 }
