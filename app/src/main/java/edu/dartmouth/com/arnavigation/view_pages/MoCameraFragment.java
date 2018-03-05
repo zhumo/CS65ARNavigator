@@ -237,6 +237,9 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
 
         sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
+
+        // Cause fragment to redraw the nearby places, since drawn objects are not saved on pause.
+        nearbyPlacesChanged = true;
     }
 
     @Override
@@ -333,15 +336,15 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 float tappedYLoc = tap.getY();
 
                 float[] worldCoords = screenPointToWorldRay(tappedXLoc, tappedYLoc, camera);
-                Log.d("mztag", "screen2World: (" +
-                        worldCoords[0] + ", " +
-                        worldCoords[1] + ", " +
-                        worldCoords[2] + ", " +
-                        worldCoords[3] + ", " +
-                        worldCoords[4] + ", " +
-                        worldCoords[5] + ", " +
-                        ")"
-                );
+//                Log.d("mztag", "screen2World: (" +
+//                        worldCoords[0] + ", " +
+//                        worldCoords[1] + ", " +
+//                        worldCoords[2] + ", " +
+//                        worldCoords[3] + ", " +
+//                        worldCoords[4] + ", " +
+//                        worldCoords[5] + ", " +
+//                        ")"
+//                );
 
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
                     // The screen to world conversion isn't working right now. So coerce to false.

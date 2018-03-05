@@ -49,7 +49,7 @@ public class GetNearbyPlacesRequest extends AsyncTask<LatLng, Void, JSONObject> 
                     .appendQueryParameter("location", originLatLng.latitude + "," + originLatLng.longitude)
                     .appendQueryParameter("radius", "1000");
             Uri nearbyPlacesUri = uriBuilder.build();
-            Log.d("mztag", "Attempting: " + nearbyPlacesUri.toString());
+//            Log.d("mztag", "Attempting: " + nearbyPlacesUri.toString());
             URL nearbyPlacesURL = new URL(nearbyPlacesUri.toString());
 
             httpsURLConnection = (HttpsURLConnection) nearbyPlacesURL.openConnection();
