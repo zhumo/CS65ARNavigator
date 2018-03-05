@@ -73,7 +73,6 @@ import edu.dartmouth.com.arnavigation.R;
 import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
-import edu.dartmouth.com.arnavigation.renderers.Circle;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
 import edu.dartmouth.com.arnavigation.renderers.PlaneRenderer;
@@ -302,8 +301,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
 
         try {
-//            circle.createOnGLThread(PLACE_MARKER_COLOR, getContext());
-//            circle.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
             mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
         } catch (IOException e) {
@@ -407,8 +404,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 // during calls to session.update() as ARCore refines its estimate of the world.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
-//                circle.updateModelMatrix(mAnchorMatrix, scaleFactor);
-//                circle.drawWithIndices(viewmtx, projmtx, lightIntensity);
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
             }
