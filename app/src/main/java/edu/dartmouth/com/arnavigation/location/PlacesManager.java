@@ -19,7 +19,7 @@ public class PlacesManager {
     public List<NearbyPlace> nearbyPlaces = new ArrayList<>();
 
 
-    public void getNearbyPlaces(LatLng originLatLng, final OnPostRequest onPostRequestListener) {
+    public void getNearbyPlaces(LatLng originLatLng, final OnPostNearbyPlacesRequest onPostRequestListener) {
         new GetNearbyPlacesRequest(new GetNearbyPlacesRequest.OnPostExecute() {
             @Override
             public void onPostExecute(JSONObject responseJSON) {
@@ -54,8 +54,50 @@ public class PlacesManager {
         }).execute(originLatLng);
     }
 
-    public interface OnPostRequest {
+    public NearbyPlace getPlaceByPlaceID(String placeID) {
+        for (NearbyPlace place : nearbyPlaces) {
+            if (place.placeId.equals(placeID)) { return place; }
+        }
+        return null;
+    }
+
+    public void getPlaceDetails(final NearbyPlace place, final OnPostPlaceDetailsRequest onPostRequestListener) {
+        new GetPlaceDetailsRequest(new GetPlaceDetailsRequest.OnPostExecute() {
+            @Override
+            public void onPostExecute(JSONObject responseJSON) {
+                try {
+                    // Use these to debug the HTTP requests
+                    // Log.d("mztag", "Status: " + responseJSON.getString("status"));
+                    // Log.d("mztag", "Error Msg: " + responseJSON.getString("error_message"));
+                    if (responseJSON.getString("status").equals("OK")) {
+                        JSONObject placeJSON = responseJSON.getJSONObject("result");
+                        place.updateAttributes(placeJSON);
+
+                        onPostRequestListener.onSuccessfulRequest(place);
+                    } else {
+                        onPostRequestListener.onUnsuccessfulRequest(
+                                responseJSON.getString("status"),
+                                responseJSON.getString("error_message")
+                        );
+                    }
+                } catch (JSONException e) {
+                    onPostRequestListener.onUnsuccessfulRequest(
+                            "JSON_ERROR",
+                            "Could not load nearby places"
+                    );
+                }
+            }
+        }).execute(place);
+    }
+
+    public interface OnPostNearbyPlacesRequest {
         void onSuccessfulRequest();
+
+        void onUnsuccessfulRequest(String errorStatus, String errorMessage);
+    }
+
+    public interface OnPostPlaceDetailsRequest {
+        void onSuccessfulRequest(NearbyPlace place);
 
         void onUnsuccessfulRequest(String errorStatus, String errorMessage);
     }

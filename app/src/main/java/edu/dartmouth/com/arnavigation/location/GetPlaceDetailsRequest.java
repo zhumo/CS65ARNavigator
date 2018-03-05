@@ -4,6 +4,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.nearby.Nearby;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -16,7 +17,7 @@ import java.net.URL;
 
 import javax.net.ssl.HttpsURLConnection;
 
-public class GetPlaceDetailsRequest extends AsyncTask<String, Void, JSONObject> {
+public class GetPlaceDetailsRequest extends AsyncTask<NearbyPlace, Void, JSONObject> {
     private static String NEARBY_PLACES_AUTHORITY = "maps.googleapis.com";
     private static String API_KEY = "AIzaSyDtlvUxYCusIgmEU6ACg6Wm5KEu-5UM3aM";
     private OnPostExecute listener;
@@ -26,8 +27,8 @@ public class GetPlaceDetailsRequest extends AsyncTask<String, Void, JSONObject> 
     }
 
     @Override
-    protected JSONObject doInBackground(String... placeIds) {
-        String placeID = placeIds[0];
+    protected JSONObject doInBackground(NearbyPlace... places) {
+        NearbyPlace place = places[0];
 
         HttpsURLConnection httpsURLConnection = null;
         JSONObject responseJSON = new JSONObject();
@@ -44,7 +45,7 @@ public class GetPlaceDetailsRequest extends AsyncTask<String, Void, JSONObject> 
                     .appendPath("details")
                     .appendPath("json")
                     .appendQueryParameter("key", API_KEY)
-                    .appendQueryParameter("placeid", placeID);
+                    .appendQueryParameter("placeid", place.placeId);
             Uri nearbyPlacesUri = uriBuilder.build();
 //            Log.d("mztag", "Attempting: " + nearbyPlacesUri.toString());
             URL nearbyPlacesURL = new URL(nearbyPlacesUri.toString());

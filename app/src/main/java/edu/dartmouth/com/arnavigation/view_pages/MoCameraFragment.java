@@ -115,10 +115,26 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private double rotationInDegrees;
 
     private PlacesManager placesManager = PlacesManager.getInstance();
-
-    private PlacesManager.OnPostRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostRequest() {
+    private PlacesManager.OnPostNearbyPlacesRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostNearbyPlacesRequest() {
         @Override
         public void onSuccessfulRequest() { nearbyPlacesChanged = true; }
+
+        @Override
+        public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+            builder.setTitle("Nearby Places Error");
+            builder.setMessage(errorMessage);
+            builder.setPositiveButton("OK", null);
+            builder.show();
+        }
+    };
+    private PlacesManager.OnPostPlaceDetailsRequest receivePlaceDetailsResponseListener = new PlacesManager.OnPostPlaceDetailsRequest() {
+        @Override
+        public void onSuccessfulRequest(NearbyPlace nearbyPlace) {
+            Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
+            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+            startActivity(placeDetailsIntent);
+        }
 
         @Override
         public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
@@ -345,10 +361,7 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 // Randomly select one, because raycasting doesn't work right now.
                 int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
                 NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
-                Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
-                placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
-                placeDetailsIntent.putExtra("name", nearbyPlace.name);
-                startActivity(placeDetailsIntent);
+                placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
             }
 
             // Draw background.

@@ -19,6 +19,7 @@ public class NearbyPlace {
     public String name;
     public String placeId;
     public String vicinity;
+    public String formattedAddress;
 
     public NearbyPlace(JSONObject placeData) {
         try {
@@ -80,5 +81,11 @@ public class NearbyPlace {
         boolean withinY = tappedYLoc < yUpperBound && tappedYLoc > yLowerBound;
 
         return withinX && withinY;
+    }
+
+    public void updateAttributes(JSONObject attributesJSON) {
+        try {
+            formattedAddress = attributesJSON.getString("formatted_address");
+        } catch (JSONException e) { e.printStackTrace(); }
     }
 }
