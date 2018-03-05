@@ -74,6 +74,7 @@ import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
+import edu.dartmouth.com.arnavigation.renderers.Triangle;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
@@ -90,8 +91,11 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private DisplayRotationHelper mDisplayRotationHelper;
 
     private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
+
+    private float[] PLACE_MARKER_COLOR = new float[] {46.0f, 194.0f, 138.0f, 1.0f};
+//    private final Triangle mVirtualObject = new Triangle(PLACE_MARKER_COLOR);
     private final ObjectRenderer mVirtualObject = new ObjectRenderer();
-    private final ObjectRenderer mVirtualObjectShadow = new ObjectRenderer();
+
 
     private final float[] mAnchorMatrix = new float[16];
 
@@ -102,8 +106,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private LatLng mUserLatLng;
     private LatLng mDestination;
     private float mHeading;
-
-    private float[] PLACE_MARKER_COLOR = new float[] {46, 194, 138, 1};
 
     private SensorManager sensorManager;
     private Sensor accelerometer;
@@ -297,9 +299,11 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         try {
             mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to read obj file");
-        }
+        } catch (IOException e ) { e.printStackTrace(); }
+
+//        // Uncomment for Triangle.
+//        mVirtualObject.createOnGlThread(getContext());
+//        mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
     }
 
     @Override
