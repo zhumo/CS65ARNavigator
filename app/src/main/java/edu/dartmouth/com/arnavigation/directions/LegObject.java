@@ -130,7 +130,7 @@ public class LegObject {
 
         float[] results = new float[2];
         Location.distanceBetween(userPosition.latitude, userPosition.longitude,
-                mWayPointsArray[0].latitude, mWayPointsArray[0].longitude, results);
+                mWayPointsArray[1].latitude, mWayPointsArray[1].longitude, results);
 
 
         float distance = results[0];
@@ -138,7 +138,24 @@ public class LegObject {
         float bearing360 = results[1];
         bearing360 = (((bearing360 % 360) + 360) % 360); //way to calculate true modulus
 
-        Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + bearing);
+        double offset = (double)bearing360 - heading;
+        offset = (((offset % 360) + 360) % 360);
+
+        double offsetRadians = offset * Math.PI / 180;
+
+        float xRot = 0;
+        float yRot = (float)Math.sin(offsetRadians/2);
+        float zRot = 0;
+        float wRot = (float)Math.cos(offsetRadians/2);
+
+        Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360 + " heading: " + heading + " offset: " + offset + " offsetRadians: " + offsetRadians);
+
+        //Log.d("PATH_POSE", "xRot: " + xRot + " yRot: " + yRot + " zRot: " + zRot + " wRot: " + wRot);
+
+        float quaternionProof = (xRot * xRot) + (yRot * yRot) + (zRot * zRot) + (wRot * wRot);
+        Log.d("QUATERNION_PROOF", "This value should equal 1: " + quaternionProof);
+
+        //Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + bearing);
 
         float[] translation = new float[3]; //three dimensional translation
         translation[0] = 0.0f; //(float)(distance * Math.cos(bearing));
@@ -149,9 +166,9 @@ public class LegObject {
         //calculate using heading ...
         //hardcode for now
         rotation[0] = 0.0f;
-        rotation[1] = bearing360 - heading; //y rotation of bearing
+        rotation[1] = (float)Math.sin(offsetRadians/2); //y rotation of bearing
         rotation[2] = 0.0f;
-        rotation[3] = 0.0f;
+        rotation[3] = (float)Math.cos(offsetRadians/2);
 
         Log.d("LEG_POSE", "Leg pose translation \n x:" + translation[0] + " y:" + translation[1] + " z:" + translation[2]
                 + "\n Leg pose rotation \n x:" +rotation[0] + " y:" + rotation[1] + " z:" + rotation[2] + " w:" + rotation[3]);
@@ -166,6 +183,9 @@ public class LegObject {
         double startLat = refLatLng.latitude;
         double startLon = refLatLng.longitude;
 
+        double startLatMeters = getLatInMeters(startLat);
+        double startLonMeters = getLonInMeters(startLon);
+
         double latDiff;
         double lonDiff;
 
@@ -178,43 +198,69 @@ public class LegObject {
         float[] results = new float[2];
         float distance;
         float bearingFloat;
-        double bearingDouble;
+        double bearingRadians;
         double relativeAngle;
 
+        float dx;
+        float dy = -0.5f;
+        float dz;
+
+        float scaleFactor = 1.0f;
+
         LatLng thisLatLng;
-        LatLng lastLatLng;
+        LatLng lastLatLng = refLatLng;
+
 
 
         for (int i = 0; i < mWayPointsArray.length; i++){
             int j = i * 3;
+            //int h = j-3;
 
             thisLatLng = mWayPointsArray[i];
 
-            if (i == 0){
-                lastLatLng = refLatLng;
-            } else {
-                lastLatLng = mWayPointsArray[i-1];
-            }
+//            Location.distanceBetween(lastLatLng.latitude, lastLatLng.longitude, thisLatLng.latitude, thisLatLng.longitude, results);
+//            distance = results[0];
+//            bearingFloat = results[1];
+//            bearingFloat = (((bearingFloat % 360) + 360) % 360);
+////            relativeAngle = (double) bearingFloat - heading;
+////
+//            bearingRadians = (double)(bearingFloat * Math.PI / 180);
+//
+//            dx = (float)(distance * Math.sin(bearingRadians));
+//            dz = (float)(distance * Math.cos(bearingRadians));
+//
+//            Log.d("LOCATION_CALC", "Distance: " + distance + " bearing: " + bearingFloat + " dx: " + dx + " dz: " + dz);
 
-            Location.distanceBetween(lastLatLng.latitude, lastLatLng.longitude, thisLatLng.latitude, thisLatLng.longitude, results);
-            distance = results[1];
-            bearingFloat = results[1];
-            bearingFloat = (((bearingFloat % 360) + 360) % 360);
-            relativeAngle = (double) bearingFloat - heading;
+            double thisLatInMeters = getLatInMeters(thisLatLng.latitude);
+            double thisLonInMeters = getLonInMeters(thisLatLng.longitude);
 
-            bearingDouble = (double)results[1];
+            latDiff = thisLatInMeters - startLatMeters;
+            lonDiff = thisLonInMeters - startLonMeters;
 
-            vertices[j] = (float)(distance * Math.cos(bearingDouble));
-            vertices[j+1] = -0.5f;
-            vertices[j+2] = (float)(distance * Math.sin(bearingDouble));
+            dx = (float)latDiff;
+            dz = (float)lonDiff;
+
+
+
+            Log.d("LOCATION_CALC", "dx: " + dx + " dz: " + dz);
+
+            vertices[j] = dx * scaleFactor;
+            vertices[j+1] = dy * scaleFactor;
+            vertices[j+2] = dz * scaleFactor;
+
+
+//
+//            vertices[j] = (float)(distance * Math.cos(relativeAngle));
+//            vertices[j+1] = -0.5f;
+//            vertices[j+2] = (float)(distance * Math.sin(relativeAngle));
 
 
 //            latDiff = mWayPointsArray[i].latitude - startLat;
 //            lonDiff = mWayPointsArray[i].longitude - startLon;
 //
-//            vertices[j] = (float)lonDiff * latLngToScreenScale;
-//            vertices[j+1] = 0.0f;
-//            vertices[j+2] = (float)latDiff * latLngToScreenScale;
+//            vertices[j] = (float)latDiff * latLngToScreenScale;
+//            vertices[j+1] = -0.3f;
+//            vertices[j+2] = (float)lonDiff * latLngToScreenScale;
 
             if (i < mWayPointsArray.length - 1){
                 int k = i*2;
@@ -238,6 +284,17 @@ public class LegObject {
 //
 //        translationBuffer.position(0);
 //        indexBuffer.position(0);
+    }
+
+
+    private double getLatInMeters(double lat) {
+        double latMeters = 111132.954 - 559.822 * Math.cos(2.0 * lat) + 1.175 * Math.cos(4.0 * lat);
+        return latMeters;
+    }
+
+    private double getLonInMeters(double lon) {
+        double lonMeters = (Math.PI/180) * 6367449 * Math.cos(lon);
+        return lonMeters;
     }
 
 }

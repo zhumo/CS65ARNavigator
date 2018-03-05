@@ -123,10 +123,9 @@ public class Line {
         lineColor = color;
 
         //get shader references
-        int vertexShader = loadShader(
-                GLES20.GL_VERTEX_SHADER, projectedVertexShaderCode);
-        int fragmentShader = ShaderUtil.loadGLShader(TAG, context,
-                GLES20.GL_FRAGMENT_SHADER, R.raw.object_fragment);
+        int vertexShader = loadShader(GLES20.GL_VERTEX_SHADER, projectedVertexShaderCode);
+        //int fragmentShader = ShaderUtil.loadGLShader(TAG, context, GLES20.GL_FRAGMENT_SHADER, R.raw.object_fragment);
+        int fragmentShader = loadShader(GLES20.GL_FRAGMENT_SHADER, FragmentShaderCode);
 
         //create buffer references
         int[] buffers = new int[2];
@@ -278,15 +277,20 @@ public class Line {
                 mPositionHandle, VERTEX_SIZE, GLES20.GL_FLOAT, false, VERTEX_BYTE_SIZE, vertexBuffer);
 
         // Set the lighting environment properties.
-        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
-        normalizeVec3(mViewLightDirection);
-        GLES20.glUniform4f(mLightingParametersUniform,
-                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
+//        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
+//        normalizeVec3(mViewLightDirection);
+//        GLES20.glUniform4f(mLightingParametersUniform,
+//                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
+//
+//        // Set the object material properties.
+//        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
+//                mSpecularPower);
 
-        // Set the object material properties.
-        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
-                mSpecularPower);
+        // get handle to fragment shader's vColor member
+        mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
 
+        // Set color for drawing the triangle
+        GLES20.glUniform4fv(mColorHandle, 1, lineColor, 0);
 
         // Set the ModelViewProjection matrix in the shader.
         GLES20.glUniformMatrix4fv(
@@ -338,14 +342,20 @@ public class Line {
                 mPositionHandle, VERTEX_SIZE, GLES20.GL_FLOAT, false, VERTEX_BYTE_SIZE, vertexBuffer);
 
         // Set the lighting environment properties.
-        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
-        normalizeVec3(mViewLightDirection);
-        GLES20.glUniform4f(mLightingParametersUniform,
-                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
+//        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
+//        normalizeVec3(mViewLightDirection);
+//        GLES20.glUniform4f(mLightingParametersUniform,
+//                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
+//
+//        // Set the object material properties.
+//        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
+//                mSpecularPower);
 
-        // Set the object material properties.
-        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
-                mSpecularPower);
+        // get handle to fragment shader's vColor member
+        mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
+
+        // Set color for drawing the triangle
+        GLES20.glUniform4fv(mColorHandle, 1, lineColor, 0);
 
 
         // Set the ModelViewProjection matrix in the shader.

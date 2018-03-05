@@ -368,6 +368,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             frame = mSession.update();
             camera = frame.getCamera();
 
+            //Pose cameraPose = frame.getCamera().getPose();
+            //Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
+
+            //float cameraYRot = (float)(Math.asin(cameraPose.qy()) * 360/Math.PI);
+            //Log.d("CAMERA_Y", "yRotation: " + cameraYRot);
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
             MotionEvent tap = mQueuedSingleTaps.poll();
@@ -407,19 +412,45 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
             if (isLineCreated == true){
 
-                LatLng firstLoc = leg.getPoints()[0];
-                float[] results = new float[2];
+//                LatLng firstLoc = leg.getPoints()[0];
+//                float[] results = new float[2];
+//
+//                Location.distanceBetween(mUserLatLng.latitude, mUserLatLng.longitude, firstLoc.latitude, firstLoc.latitude, results);
+//
+//                float bearing = results[1];
+//                float bearing360 = (((bearing % 360) + 360) % 360);
+//
+//                double offset = (double)bearing360 - mHeading;
+//                offset = (((offset % 360) + 360) % 360);
+//
+//                double offsetRadians = offset * Math.PI / 180;
+//                float xRot = 0;
+//                float yRot = (float)Math.sin(offsetRadians/2);
+//                float zRot = 0;
+//                float wRot = (float)Math.cos(offsetRadians/2);
+//
+//                Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360 + " offset: " + offset + " offsetRadians: " + offsetRadians);
+//
+//                Log.d("PATH_POSE", "xRot: " + xRot + " yRot: " + yRot + " zRot: " + zRot + " wRot: " + wRot);
+//
+//                float quaternionProof = (xRot * xRot) + (yRot * yRot) + (zRot * zRot) + (wRot * wRot);
+//                Log.d("QUATERNION_PROOF", "This value should equal 1: " + quaternionProof);
+//
 
-                Location.distanceBetween(mUserLatLng.latitude, mUserLatLng.longitude, firstLoc.latitude, firstLoc.latitude, results);
+                Pose cameraPose = camera.getPose();
 
-                float bearing = results[1];
-                float bearing360 = (((bearing % 360) + 360) % 360);
+                Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
 
-                Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360);
+
+
+                Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 0.5f);
+
+                Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
                 //add anchor
-                mAnchors.add(mSession.createAnchor(
-                        frame.getCamera().getPose().compose(Pose.makeRotation(0, -bearing360, 0, 0).extractRotation())));
+                mAnchors.add(mSession.createAnchor(newPose));
+
+                        //frame.getCamera().getPose().compose(Pose.makeRotation(xRot, yRot, zRot, wRot).extractRotation())));
 
                 //mAnchors.add(mSession.createAnchor(leg.getLegPose()));
 
@@ -540,7 +571,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         getActivity().runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                showSnackbarMessage("Searching for surfaces...", false);
+                //showSnackbarMessage("Searching for surfaces...", false);
             }
         });
     }
@@ -609,6 +640,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 for (List<HashMap<String, String>> path : paths[0]) {
                     waypoints = new ArrayList<LatLng>();
 
+                    //add user location as first point
+                    waypoints.add(mUserLatLng);
+
                     for (HashMap<String, String> point : path) {
 
                         //get values from json-created hashmap
@@ -626,7 +660,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 leg = new LegObject(waypointsArray);
                 //create buffers from current user location
                 leg.createTranslationBufferRelativeToLatLng(mUserLatLng, mHeading);
-                //leg.setLegPose(mUserLatLng, mHeading);
+                leg.setLegPose(mUserLatLng, mHeading);
 
                 lineRenderer.setLineVertices(leg.getVertices());
                 lineRenderer.setLineIndices(leg.getIndices());
@@ -663,28 +697,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 //                    }
 
             }
-            else {
-//                try {//read hardcode json for now
-//                    JSONObject obj = new JSONObject(loadJSONFromAsset());
-//                    JSONArray m_jArry = obj.getJSONArray("");
-//                    ArrayList<HashMap<String, String>> latLngList = new ArrayList<HashMap<String, String>>();
-//                    HashMap<String, String> latLngMap;
-//
-//                    for (int i = 0; i < m_jArry.length(); i++) {
-//                        JSONObject jo_inside = m_jArry.getJSONObject(i);
-//                        String lat = jo_inside.getString("Latitude");
-//                        String lon = jo_inside.getString("Longitude");
-//
-//
-////                        //Add your values in your `ArrayList` as below:
-////                        latLngMap = new HashMap<String, String>();
-////                        latLngMap.put("lat", lat);
-////                        latLngMap.put("lon", lon);
-////                        latLngList.add(latLngMap);
-//                    }
-//                } catch (JSONException e) {
-//                e.printStackTrace();
-            }
+
 
             return "done";
         }
@@ -729,7 +742,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 float currentDegree = (float) rotationInDegrees;
 
                 // do something with the rotation in degrees
-                Log.d("COMPASS", "Heading: " + currentDegree);
+                //Log.d("COMPASS", "Heading: " + currentDegree);
                 mHeading = currentDegree;
             }
         }

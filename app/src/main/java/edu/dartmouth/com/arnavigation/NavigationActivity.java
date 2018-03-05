@@ -26,6 +26,10 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import com.google.android.gms.common.api.Status;
+import com.google.android.gms.location.places.Place;
+import com.google.android.gms.location.places.ui.PlaceAutocompleteFragment;
+import com.google.android.gms.location.places.ui.PlaceSelectionListener;
 import com.google.android.gms.maps.model.LatLng;
 
 import java.util.ArrayList;
@@ -41,7 +45,7 @@ import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 public class NavigationActivity extends AppCompatActivity {
     private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
 
-    private EditText mLocationSearchText;
+    //private EditText mLocationSearchText;
     private Spinner travelSpinner;
 
     private DirectionsManager directionsManager;
@@ -56,6 +60,8 @@ public class NavigationActivity extends AppCompatActivity {
     BroadcastReceiver newDirectionsReceiver;
     BroadcastReceiver updateLocationReceiver;
 
+    private String placeAddress;
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -63,7 +69,7 @@ public class NavigationActivity extends AppCompatActivity {
         setContentView(R.layout.activity_navigation);
 
         // get destination input
-        mLocationSearchText = findViewById(R.id.locationSearchText);
+        //mLocationSearchText = findViewById(R.id.locationSearchText);
 
         // get and set travel spinner
         travelSpinner = findViewById(R.id.travelSpinner);
@@ -155,6 +161,23 @@ public class NavigationActivity extends AppCompatActivity {
 
         ViewPagerAdapter viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager(), fragments);
         viewPager.setAdapter(viewPagerAdapter);
+
+
+        //set up places autocomplete
+        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                Log.d("PLACE", "Place: " + place.getName());
+                placeAddress = place.getAddress().toString();
+            }
+
+            @Override
+            public void onError(Status status) {
+                Log.d("PLACE_ERROR", "Cannot find place with status: " + status.getStatusMessage());
+            }
+        });
+
     }
 
     @Override
@@ -189,14 +212,14 @@ public class NavigationActivity extends AppCompatActivity {
 
     public void locationSearchPressed(View v) {
         //check if empty string
-        if (mLocationSearchText.getText().toString() == null) {
+        if (placeAddress == null) {
             Toast.makeText(this, "Please enter a destination", Toast.LENGTH_SHORT).show();
             return;
         }
 
         //close search text if still open
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+        //InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        //imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
         //disable search button
         Button searchButton = findViewById(R.id.searchButton);
@@ -204,22 +227,22 @@ public class NavigationActivity extends AppCompatActivity {
 
         //if address, get geocode
         //assume address for now
-        String address = mLocationSearchText.getText().toString();
+        //String address = mLocationSearchText.getText().toString();
 
         //pass to DirectionsManager address function
-        directionsManager.getDirectionsWithAddress(currentLatLng, address, travelSpinner.getSelectedItemPosition());
+        directionsManager.getDirectionsWithAddress(currentLatLng, placeAddress, travelSpinner.getSelectedItemPosition());
     }
 
     public void resetButtonClicked(View v) {
         navigationMapFragment.reset();
         cameraFragment.reset();
 
-        EditText destinationInput = findViewById(R.id.locationSearchText);
-        destinationInput.setText("");
+        //EditText destinationInput = findViewById(R.id.locationSearchText);
+        //destinationInput.setText("");
         travelSpinner.setSelection(0);
 
-        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
+        //InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        //imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
         Button searchButton = findViewById(R.id.searchButton);
         searchButton.setEnabled(true);

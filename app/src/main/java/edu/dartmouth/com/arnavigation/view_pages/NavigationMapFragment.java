@@ -67,7 +67,7 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
 
-        zoomToUser();
+        setZoom(mUserLatLng);
     }
 
     private void zoomToUser() {
