@@ -31,6 +31,7 @@ import edu.dartmouth.com.arnavigation.directions.DirectionsManager;
 import edu.dartmouth.com.arnavigation.location.LocationService;
 import edu.dartmouth.com.arnavigation.permissions.PermissionManager;
 import edu.dartmouth.com.arnavigation.view_pages.CameraFragment;
+import edu.dartmouth.com.arnavigation.view_pages.MoCameraFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NavigationMapFragment;
 import edu.dartmouth.com.arnavigation.view_pages.NonSwipingViewPager;
 import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
@@ -44,7 +45,7 @@ public class NavigationActivity extends AppCompatActivity {
 
     NonSwipingViewPager viewPager;
 
-    CameraFragment cameraFragment = new CameraFragment();
+    MoCameraFragment cameraFragment = new MoCameraFragment();
     NavigationMapFragment navigationMapFragment = new NavigationMapFragment();
 
     BroadcastReceiver newDirectionsReceiver;
@@ -67,6 +68,8 @@ public class NavigationActivity extends AppCompatActivity {
                 intent.getExtras().getDouble(LocationService.LONGITUDE_KEY)
             );
             currentLatLng = newLatLng;
+            navigationMapFragment.setUserLocation(newLatLng);
+            cameraFragment.setUserLocation(newLatLng);
             }
         };
 
@@ -115,12 +118,14 @@ public class NavigationActivity extends AppCompatActivity {
 
         Location lastKnownLocation = locationManager.getLastKnownLocation(bestLocationProvider);
 
-        currentLatLng = new LatLng(
+        if (lastKnownLocation != null) {
+            currentLatLng = new LatLng(
                 lastKnownLocation.getLatitude(),
                 lastKnownLocation.getLongitude()
-        );
-        navigationMapFragment.setUserLocation(currentLatLng);
-
+            );
+            navigationMapFragment.setUserLocation(currentLatLng);
+            cameraFragment.setUserLocation(currentLatLng);
+        }
         // Set up view pager
         viewPager = findViewById(R.id.navigation_view_pager);
 

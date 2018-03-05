@@ -71,7 +71,9 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         View mapFragment = super.onCreateView(layoutInflater, viewGroup, bundle);
 
         View locationButton = ((View) mapFragment.findViewById(1).getParent()).findViewById(2);
-        ((ViewManager) locationButton.getParent()).removeView(locationButton);
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+        layoutParams.topMargin = 275; // Push the button down a bit, because it's being blocked.
+        locationButton.setLayoutParams(layoutParams);
 
         return mapFragment;
     }
@@ -82,16 +84,14 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
 
         // Ignore this error because we've ensured location permission exists when activity launches.
         mMap.setMyLocationEnabled(true);
-
-        zoomToUser();
     }
 
-    private void zoomToUser() {
-        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(mUserLatLng, 17.0f));
+    private void zoomToUser() { zoomTo(mUserLatLng); }
+    private void zoomTo(LatLng zoomToLatLng) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(zoomToLatLng, 17.0f));
     }
 
     private void setMarkers(LatLng endPosition) {
-
         mMap.addMarker(new MarkerOptions().position(mUserLatLng).icon(
                 BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN))
         );
@@ -104,9 +104,7 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
     }
 
     private void setZoom(LatLng position) {
-        if (position != null){
-            setNewBounds(position);
-        }
+        if (position != null){ setNewBounds(position); }
     }
 
     private void setNewBounds(LatLng finalPosition) {
@@ -148,7 +146,16 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         return zoom;
     }
 
-    public void setUserLocation(LatLng newLocation) { mUserLatLng = newLocation; }
+    public void setUserLocation(LatLng newLocation) {
+        if(mUserLatLng == null) {
+            if (mMap != null) {
+                mUserLatLng = newLocation;
+                zoomToUser();
+            }
+        } else {
+            mUserLatLng = newLocation;
+        }
+    }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
         if (path.size() > 0) {
@@ -168,7 +175,6 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
             mDestination = mUserLatLng;
         }
     }
-
 
     private void addToPolyine(ArrayList<LatLng> waypoints) {
         //add new waypoints to polyline
