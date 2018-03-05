@@ -356,9 +356,21 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                         placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
                         placeDetailsIntent.putExtra("name", nearbyPlace.name);
                         startActivity(placeDetailsIntent);
+                        // Raycasting may determine that multiple objects were tapped,
+                        // esp. when objects are behind one another. Therefore, we take the first one and
+                        // assume the user meant to tap it.
+                        // TODO: ideally, this would figure out the nearest one (based on z translation).
                         break;
                     }
                 }
+
+                // Randomly select one, because raycasting doesn't work right now.
+                int placeIndex = (int) (Math.floor(nearbyPlaces.size() * Math.random()));
+                NearbyPlace nearbyPlace = nearbyPlaces.get(placeIndex);
+                Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
+                placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+                placeDetailsIntent.putExtra("name", nearbyPlace.name);
+                startActivity(placeDetailsIntent);
             }
 
             // Draw background.
