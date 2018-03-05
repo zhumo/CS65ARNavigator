@@ -39,7 +39,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
-import com.google.android.gms.location.places.Places;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
@@ -62,7 +61,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
-
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
@@ -273,15 +271,6 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
         }
     }
 
-    public void setUserLocation(LatLng newLatLng) {
-        if (mUserLatLng == null && newLatLng != null) {
-            mUserLatLng = newLatLng;
-            placesManager.getNearbyPlaces(mUserLatLng, receiveNearbyPlacesResponseListener);
-        } else {
-            mUserLatLng = newLatLng;
-        }
-    }
-
     private void onSingleTap(MotionEvent e) {
         // Leaky bucket
         mQueuedSingleTaps.offer(e);
@@ -434,6 +423,15 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
             }
         });
         builder.show();
+    }
+
+    public void setUserLocation(LatLng newLatLng) {
+        if (mUserLatLng == null && newLatLng != null) {
+            mUserLatLng = newLatLng;
+            placesManager.getNearbyPlaces(mUserLatLng, receiveNearbyPlacesResponseListener);
+        } else {
+            mUserLatLng = newLatLng;
+        }
     }
 
     public void reset() {

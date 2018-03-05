@@ -16,6 +16,8 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -192,12 +194,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         }
     };
 
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-
         mDisplayRotationHelper = new DisplayRotationHelper(getContext());
 
         // Set up tap listener.
@@ -233,7 +233,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         }
 
         if (message != null) {
-            showSnackbarMessage(message, true);
+            showARErrorMessage(message);
             Log.e(TAG, "Exception creating session", exception);
             return;
         }
@@ -241,10 +241,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         // Create default config and check if supported.
         Config config = new Config(mSession);
         if (!mSession.isSupported(config)) {
-            showSnackbarMessage("This device does not support AR", true);
+            showARErrorMessage("This device does not support AR");
+            return;
         }
         mSession.configure(config);
-
 
         sensorManager = (SensorManager) getActivity().getSystemService(SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
@@ -278,10 +278,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     @Override
     public void onResume() {
         super.onResume();
-
         if (mSession != null) {
-            showLoadingMessage();
-            // Note that order matters - see the note in onPause(), the reverse applies here.
+            Toast.makeText(getContext(), "Loading...", Toast.LENGTH_SHORT).show();
             mSession.resume();
         }
         mSurfaceView.onResume();
@@ -297,9 +295,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     @Override
     public void onPause() {
         super.onPause();
-        // Note that the order matters - GLSurfaceView is paused first so that it does not try
-        // to query the session. If Session is paused before GLSurfaceView, GLSurfaceView may
-        // still call mSession.update() and get a SessionPausedException.
         mDisplayRotationHelper.onPause();
         mSurfaceView.onPause();
         if (mSession != null) {
@@ -315,10 +310,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         super.setUserVisibleHint(isVisibleToUser);
         if(mSurfaceView == null) { return; }
 
+        // When the fragment scrolls into or out of the viewpager,
+        // it should act as if it were paused or resumed.
         if (isVisibleToUser) {
-            mSurfaceView.onResume();
+            onResume();
         } else {
-            mSurfaceView.onPause();
+            onPause();
         }
     }
 
@@ -515,17 +512,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // using it.
             pointCloud.release();
 
-            // Check if we detected at least one plane. If so, hide the loading message.
-            if (mMessageSnackbar != null) {
-                for (Plane plane : mSession.getAllTrackables(Plane.class)) {
-                    if (plane.getType() == com.google.ar.core.Plane.Type.HORIZONTAL_UPWARD_FACING
-                            && plane.getTrackingState() == TrackingState.TRACKING) {
-                        hideLoadingMessage();
-                        break;
-                    }
-                }
-            }
-
             // Visualize planes.
             mPlaneRenderer.drawPlanes(
                     mSession.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
@@ -545,11 +531,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
                 mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
-
-
-                //triangle.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                //triangle.draw(viewmtx, projmtx, lightIntensity);
-
             }
 
 
@@ -567,42 +548,17 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         }
     }
 
-
-    private void showSnackbarMessage(String message, boolean finishOnDismiss) {
-        mMessageSnackbar = Snackbar.make(
-                getView(),
-                message, Snackbar.LENGTH_INDEFINITE);
-        mMessageSnackbar.getView().setBackgroundColor(0xbf323232);
-        if (finishOnDismiss) {
-            mMessageSnackbar.setAction(
-                    "Dismiss",
-                    new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            mMessageSnackbar.dismiss();
-                        }
-                    });
-            mMessageSnackbar.addCallback(
-                    new BaseTransientBottomBar.BaseCallback<Snackbar>() {
-                        @Override
-                        public void onDismissed(Snackbar transientBottomBar, int event) {
-                            super.onDismissed(transientBottomBar, event);
-                            getActivity().finish();
-                        }
-                    });
-        }
-        mMessageSnackbar.show();
-    }
-
-    private void showLoadingMessage() {
-
-
-        /* NOOP */
-
-    }
-
-    private void hideLoadingMessage() {
-        /* NOOP */
+    private void showARErrorMessage(String message) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle("Error");
+        builder.setMessage(message);
+        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+            @Override
+            public void onClick(DialogInterface dialog, int which) {
+                getActivity().finish();
+            }
+        });
+        builder.show();
     }
 
     public void setUserLocation(LatLng newLatLng){
