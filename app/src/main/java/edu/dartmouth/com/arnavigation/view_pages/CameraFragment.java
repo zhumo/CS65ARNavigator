@@ -386,9 +386,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         // Clear screen to notify driver it should not load any pixels from previous frame.
         GLES20.glClear(GLES20.GL_COLOR_BUFFER_BIT | GLES20.GL_DEPTH_BUFFER_BIT);
 
-
-
-
         if (mSession == null) {
             if (leg != null){
                 isLineCreated = true;
@@ -398,7 +395,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         // Notify ARCore session that the view size changed so that the perspective matrix and
         // the video background can be properly adjusted.
         mDisplayRotationHelper.updateSessionIfNeeded(mSession);
-
 
         try {
             // Obtain the current frame from ARSession. When the configuration is set to
@@ -454,16 +450,23 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
-            if (isLineCreated == true){
+            if(nearbyPlacesChanged) {
+                mAnchors.clear();
+                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
+                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
+                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
+                    mAnchors.add(nearbyPlaceAnchor);
+                }
 
+                nearbyPlacesChanged = false;
+            }
+
+            if (isLineCreated == true){
                 Pose cameraPose = camera.getPose();
 
                 Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
 
-
-
                 Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 1.0f);
-
                 Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
                 //add anchor
@@ -603,7 +606,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     }
 
     public void setUserLocation(LatLng newLatLng){
-        mUserLatLng = newLatLng;
+        if (mUserLatLng == null && newLatLng != null) {
+            mUserLatLng = newLatLng;
+            placesManager.getNearbyPlaces(mUserLatLng, receiveNearbyPlacesResponseListener);
+        } else {
+            mUserLatLng = newLatLng;
+        }
     }
 
     public void reset() {

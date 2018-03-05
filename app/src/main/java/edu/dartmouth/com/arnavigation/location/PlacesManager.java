@@ -29,7 +29,14 @@ public class PlacesManager {
                         JSONArray nearbyPlacesJSON = responseJSON.getJSONArray("results");
 
                         nearbyPlaces = new ArrayList<>();
-                        for (int i = 0; i < nearbyPlacesJSON.length(); i++) {
+
+                        int maxPlaces;
+                        if (nearbyPlacesJSON.length() < 10) {
+                            maxPlaces = nearbyPlacesJSON.length();
+                        } else {
+                            maxPlaces = 10;
+                        }
+                        for (int i = 0; i < maxPlaces; i++) {
                             JSONObject nearbyPlaceJSON = nearbyPlacesJSON.getJSONObject(i);
                             NearbyPlace nearbyPlace = new NearbyPlace(nearbyPlaceJSON);
                             nearbyPlaces.add(nearbyPlace);
