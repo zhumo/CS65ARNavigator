@@ -462,7 +462,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
 
 
-                Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 0.5f);
+                Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 1.0f);
 
                 Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
@@ -551,9 +551,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
 
             //draw line with its anchor
-            if (isLineRendered) {
+            if (isLineRendered == true) {
                 lineAnchor.getPose().toMatrix(lineAnchorMatrix, 0);
-                lineRenderer.updateModelMatrix(mAnchorMatrix, scaleFactor);
+                lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor);
                 lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
             }
 

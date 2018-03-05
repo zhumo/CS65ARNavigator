@@ -202,7 +202,7 @@ public class LegObject {
         double relativeAngle;
 
         float dx;
-        float dy = -0.5f;
+        float dy = -1.0f;
         float dz;
 
         float scaleFactor = 1.0f;
