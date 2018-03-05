@@ -71,7 +71,9 @@ public class NavigationMapFragment extends SupportMapFragment implements OnMapRe
         View mapFragment = super.onCreateView(layoutInflater, viewGroup, bundle);
 
         View locationButton = ((View) mapFragment.findViewById(1).getParent()).findViewById(2);
-        ((ViewManager) locationButton.getParent()).removeView(locationButton);
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) locationButton.getLayoutParams();
+        layoutParams.topMargin = 275; // Push the button down a bit, because it's being blocked.
+        locationButton.setLayoutParams(layoutParams);
 
         return mapFragment;
     }
