@@ -616,6 +616,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     public void reset() {
         /* Not implemented. Should remove any path drawings. */
+        lineAnchor = null;
+        isLineRendered = false;
     }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
