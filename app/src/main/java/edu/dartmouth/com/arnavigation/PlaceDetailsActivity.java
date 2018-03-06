@@ -1,22 +1,13 @@
 package edu.dartmouth.com.arnavigation;
 
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.location.Location;
-import android.net.Uri;
 import android.os.Bundle;
-import android.provider.MediaStore;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.w3c.dom.Text;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.text.DecimalFormat;
 
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.location.PlacesManager;
@@ -31,7 +22,7 @@ public class PlaceDetailsActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_nearby_place_details);
+        setContentView(R.layout.activity_place_details);
 
         String placeID = getIntent().getExtras().getString(PLACE_ID_KEY);
         NearbyPlace place = placesManager.getPlaceByPlaceID(placeID);
@@ -54,6 +45,8 @@ public class PlaceDetailsActivity extends AppCompatActivity {
         float originLat = getIntent().getExtras().getFloat(ORIGIN_LAT_KEY);
         float originLng = getIntent().getExtras().getFloat(ORIGIN_LNG_KEY);
         Location.distanceBetween(originLat, originLng, place.latitude, place.longitude, distance);
-        distanceLabel.setText(distance[0] / 1000.0f + " km");
+
+        String formattedDistance = new DecimalFormat("#.##").format(distance[0] / 1000.0f );
+        distanceLabel.setText(formattedDistance + " km away");
     }
 }
