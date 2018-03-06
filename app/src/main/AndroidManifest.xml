@@ -58,6 +58,8 @@
             android:label="@string/title_activity_permissions" />
         <activity android:name=".NearbyPlaceDetailsActivity"
             android:screenOrientation="portrait"
+            android:theme="@style/AppThemeWithActionBar"
+            android:parentActivityName=".NavigationActivity"
             android:label="@string/title_activity_nearby_place_details"/>
 
         <service
