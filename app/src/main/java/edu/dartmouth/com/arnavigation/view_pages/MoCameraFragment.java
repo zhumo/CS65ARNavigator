@@ -44,17 +44,12 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
-import com.google.ar.core.HitResult;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
 import com.google.ar.core.Trackable.TrackingState;
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -65,14 +60,12 @@ import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
-import edu.dartmouth.com.arnavigation.NearbyPlaceDetailsActivity;
+import edu.dartmouth.com.arnavigation.PlaceDetailsActivity;
 import edu.dartmouth.com.arnavigation.R;
-import edu.dartmouth.com.arnavigation.location.GetNearbyPlacesRequest;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
-import edu.dartmouth.com.arnavigation.renderers.Triangle;
 
 /**
  * This is a simple example that shows how to create an augmented reality (AR) application using
@@ -131,10 +124,10 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
     private PlacesManager.OnPostPlaceDetailsRequest receivePlaceDetailsResponseListener = new PlacesManager.OnPostPlaceDetailsRequest() {
         @Override
         public void onSuccessfulRequest(NearbyPlace nearbyPlace) {
-            Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
-            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
-            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
-            placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
+            Intent placeDetailsIntent = new Intent(getContext(), PlaceDetailsActivity.class);
+            placeDetailsIntent.putExtra(PlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+            placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
+            placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
             startActivity(placeDetailsIntent);
         }
 
@@ -344,8 +337,8 @@ public class MoCameraFragment extends Fragment implements GLSurfaceView.Renderer
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
                     // The screen to world conversion isn't working right now. So coerce to false.
                     if (false && nearbyPlace.isTapped(worldCoords)) {
-                        Intent placeDetailsIntent = new Intent(getContext(), NearbyPlaceDetailsActivity.class);
-                        placeDetailsIntent.putExtra(NearbyPlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+                        Intent placeDetailsIntent = new Intent(getContext(), PlaceDetailsActivity.class);
+                        placeDetailsIntent.putExtra(PlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
                         placeDetailsIntent.putExtra("name", nearbyPlace.name);
                         startActivity(placeDetailsIntent);
                         // Raycasting may determine that multiple objects were tapped,

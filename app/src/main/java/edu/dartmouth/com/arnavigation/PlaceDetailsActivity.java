@@ -21,7 +21,7 @@ import java.net.URL;
 import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.location.PlacesManager;
 
-public class NearbyPlaceDetailsActivity extends AppCompatActivity {
+public class PlaceDetailsActivity extends AppCompatActivity {
     public static String PLACE_ID_KEY = "placeID";
     public static String ORIGIN_LAT_KEY = "originLat";
     public static String ORIGIN_LNG_KEY = "originLng";
