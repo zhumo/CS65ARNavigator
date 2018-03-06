@@ -16,14 +16,12 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.location.Location;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -31,8 +29,6 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
-import android.support.design.widget.BaseTransientBottomBar;
-import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AlertDialog;
 import android.util.Log;
@@ -48,12 +44,8 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.Config;
 import com.google.ar.core.Frame;
-import com.google.ar.core.HitResult;
-import com.google.ar.core.Plane;
-import com.google.ar.core.PointCloud;
 import com.google.ar.core.Pose;
 import com.google.ar.core.Session;
-import com.google.ar.core.Trackable;
 import com.google.ar.core.Trackable.TrackingState;
 
 import edu.dartmouth.com.arnavigation.DisplayRotationHelper;
@@ -65,25 +57,14 @@ import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.Line;
 import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
-import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer.BlendMode;
-import edu.dartmouth.com.arnavigation.renderers.PlaneRenderer;
-import edu.dartmouth.com.arnavigation.renderers.PointCloudRenderer;
 import edu.dartmouth.com.arnavigation.renderers.Triangle;
 
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
 import com.google.ar.core.exceptions.UnavailableSdkTooOldException;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -105,15 +86,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     private Session mSession;
     private GestureDetector mGestureDetector;
-    private Frame mFrame;
-    private Snackbar mMessageSnackbar;
     private DisplayRotationHelper mDisplayRotationHelper;
 
     private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
     private final ObjectRenderer mVirtualObject = new ObjectRenderer();
-    private final ObjectRenderer mVirtualObjectShadow = new ObjectRenderer();
-    private final PlaneRenderer mPlaneRenderer = new PlaneRenderer();
-    private final PointCloudRenderer mPointCloud = new PointCloudRenderer();
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private final float[] mAnchorMatrix = new float[16];
@@ -148,7 +124,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
     private boolean isLineRendered = false;
     private boolean nearbyPlacesChanged = false;
-
 
     //for getting heading using accelerometer and magnetometer
     private SensorManager sensorManager;
@@ -338,16 +313,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         try {
             mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
             mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
-
         } catch (IOException e) {
             Log.e(TAG, "Failed to read obj file");
         }
-        try {
-            mPlaneRenderer.createOnGlThread(getContext(), "trigrid.png");
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to read plane texture");
-        }
-        mPointCloud.createOnGlThread(getContext());
 
         triangle.createOnGlThread(getContext());
 
@@ -503,30 +471,12 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
 
-            // Visualize tracked points.
-            PointCloud pointCloud = frame.acquirePointCloud();
-            mPointCloud.update(pointCloud);
-            mPointCloud.draw(viewmtx, projmtx);
-
-            // Application is responsible for releasing the point cloud resources after
-            // using it.
-            pointCloud.release();
-
-            // Visualize planes.
-            mPlaneRenderer.drawPlanes(
-                    mSession.getAllTrackables(Plane.class), camera.getDisplayOrientedPose(), projmtx);
-
             // Visualize anchors created by touch.
             float scaleFactor = 1.0f;
             for (Anchor anchor : mAnchors) {
                 if (anchor.getTrackingState() != TrackingState.TRACKING) {
                     continue;
                 }
-
-                //Log.d("DRAWING_LINE", "Drawing line for anchors");
-
-                // Get the current pose of an Anchor in world space. The Anchor pose is updated
-                // during calls to session.update() as ARCore refines its estimate of the world.
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
                 mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
@@ -601,9 +551,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         }
     }
 
-
-
-
     //async task to parse JSON response from request
     private class ParsePathDirectionsTask extends AsyncTask<List<List<HashMap<String, String>>>, Void, String> {
         @Override
@@ -656,8 +603,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             isLineCreated = true;
         }
     }
-
-
 
     @Override
     public void onSensorChanged(SensorEvent event) {
