@@ -67,12 +67,18 @@ public class PlacesManager {
     }
 
     public void getPlaceDetails(final NearbyPlace place, final OnPostPlaceDetailsRequest onPostRequestListener) {
-        new GetPlacePhotoRequest(new GetPlacePhotoRequest.OnPostExecute() {
-            @Override
-            public void onPostExecute(Boolean success) {
-                onPostRequestListener.onSuccessfulRequest(place);
-            }
-        }).execute(place);
+        if (place.photoReference == null) {
+            // If there is no photo reference, this means google's API didn't give us one.
+            // Therefore, there is no need to make a request to get it.
+            onPostRequestListener.onSuccessfulRequest(place);
+        } else {
+            new GetPlacePhotoRequest(new GetPlacePhotoRequest.OnPostExecute() {
+                @Override
+                public void onPostExecute(Boolean success) {
+                    onPostRequestListener.onSuccessfulRequest(place);
+                }
+            }).execute(place);
+        }
     }
 
     public interface OnPostNearbyPlacesRequest {

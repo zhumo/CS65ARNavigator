@@ -33,16 +33,11 @@ public class GetPlacePhotoRequest extends AsyncTask<NearbyPlace, Void, Boolean> 
     protected Boolean doInBackground(NearbyPlace... places) {
         NearbyPlace place = places[0];
 
-        Uri imageUri;
-        if(place.photoReference == null) {
-            imageUri = Uri.parse(place.iconUrl);
-        } else {
-            imageUri = Uri.parse("https://maps.googleapis.com/maps/api/place/photo").buildUpon()
+        Uri imageUri = Uri.parse("https://maps.googleapis.com/maps/api/place/photo").buildUpon()
                     .appendQueryParameter("photoreference", place.photoReference)
                     .appendQueryParameter("maxwidth", "1600")
                     .appendQueryParameter("key", API_KEY)
                     .build();
-        }
 
         HttpsURLConnection connection = null;
         try {

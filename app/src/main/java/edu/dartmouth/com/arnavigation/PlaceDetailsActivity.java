@@ -43,7 +43,11 @@ public class PlaceDetailsActivity extends AppCompatActivity {
         addressLabel.setText(place.vicinity);
 
         ImageView placeImage = findViewById(R.id.place_image);
-        placeImage.setImageBitmap(place.imageBitmap);
+        if(place.photoReference == null) {
+            placeImage.setImageResource(R.drawable.photo_not_available);
+        } else {
+            placeImage.setImageBitmap(place.imageBitmap);
+        }
 
         TextView distanceLabel = findViewById(R.id.place_distance);
         float[] distance = new float[1];
