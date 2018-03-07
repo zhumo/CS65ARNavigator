@@ -428,7 +428,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // Draw background.
             mBackgroundRenderer.draw(frame);
 
-            if(nearbyPlacesChanged) {
+            if(nearbyPlacesChanged || mAnchors.size() < placesManager.nearbyPlaces.size()) {
                 mAnchors.clear();
 //                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
 //                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
@@ -511,7 +511,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 mPlaceMarker.updateModelMatrix(mAnchorMatrix, 0.01f);
                 mPlaceMarker.draw(viewmtx, projmtx, lightIntensity);
             }
-
 
             //draw line with its anchor
             if (isLineRendered == true) {
