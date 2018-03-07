@@ -56,8 +56,7 @@ import edu.dartmouth.com.arnavigation.location.NearbyPlace;
 import edu.dartmouth.com.arnavigation.location.PlacesManager;
 import edu.dartmouth.com.arnavigation.renderers.BackgroundRenderer;
 import edu.dartmouth.com.arnavigation.renderers.Line;
-import edu.dartmouth.com.arnavigation.renderers.ObjectRenderer;
-import edu.dartmouth.com.arnavigation.renderers.Triangle;
+import edu.dartmouth.com.arnavigation.renderers.PlaceMarker;
 
 import com.google.ar.core.exceptions.UnavailableApkTooOldException;
 import com.google.ar.core.exceptions.UnavailableArcoreNotInstalledException;
@@ -89,7 +88,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private DisplayRotationHelper mDisplayRotationHelper;
 
     private final BackgroundRenderer mBackgroundRenderer = new BackgroundRenderer();
-    private final ObjectRenderer mVirtualObject = new ObjectRenderer();
+    private final PlaceMarker mPlaceMarker = new PlaceMarker();
 
     // Temporary matrix allocated here to reduce number of allocations for each frame.
     private final float[] mAnchorMatrix = new float[16];
@@ -119,7 +118,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private final float[] lineAnchorMatrix = new float[16];
 
     private Line lineRenderer = new Line();
-    private Triangle triangle = new Triangle();
 
     private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
     private boolean isLineRendered = false;
@@ -162,7 +160,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         @Override
         public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setTitle("Nearby Places Error");
+            builder.setTitle("Place Details Error");
             builder.setMessage(errorMessage);
             builder.setPositiveButton("OK", null);
             builder.show();
@@ -311,13 +309,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
         // Prepare the other rendering objects.
         try {
-            mVirtualObject.createOnGlThread(getContext(), "andy.obj", "andy.png");
-            mVirtualObject.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
+            mPlaceMarker.createOnGlThread(getContext(), "place_marker.obj", "place_marker_texture.png");
+            mPlaceMarker.setMaterialProperties(0.0f, 3.5f, 1.0f, 6.0f);
         } catch (IOException e) {
             Log.e(TAG, "Failed to read obj file");
         }
-
-        triangle.createOnGlThread(getContext());
 
         lineRenderer.createOnGLThread(PATH_COLOR, getContext());
         //lineRenderer = new Line(PATH_COLOR);
@@ -457,7 +453,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
             // If not tracking, don't draw 3d objects.
             if (camera.getTrackingState() == TrackingState.PAUSED) {
-                //return;
+                return;
             }
 
             // Get projection matrix.
@@ -479,8 +475,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 }
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
-                mVirtualObject.updateModelMatrix(mAnchorMatrix, scaleFactor);
-                mVirtualObject.draw(viewmtx, projmtx, lightIntensity);
+                // Ball should be scaled down a lot.
+                mPlaceMarker.updateModelMatrix(mAnchorMatrix, 0.01f);
+                mPlaceMarker.draw(viewmtx, projmtx, lightIntensity);
             }
 
 
