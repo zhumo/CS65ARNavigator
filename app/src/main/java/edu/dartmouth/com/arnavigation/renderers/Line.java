@@ -5,13 +5,9 @@ import android.opengl.GLES20;
 import android.opengl.Matrix;
 import android.util.Log;
 
-import com.google.ar.core.Pose;
-
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
-
-import edu.dartmouth.com.arnavigation.R;
 
 import java.lang.String;
 import java.nio.ShortBuffer;
@@ -105,7 +101,7 @@ public class Line {
     private static final float[] LIGHT_DIRECTION = new float[]{0.250f, 0.866f, 0.433f, 0.0f};
     private float[] mViewLightDirection = new float[4];
 
-    private String TAG = ObjectRenderer.class.getSimpleName();
+    private String TAG = Line.class.getSimpleName();
 
     public Line() {
     }

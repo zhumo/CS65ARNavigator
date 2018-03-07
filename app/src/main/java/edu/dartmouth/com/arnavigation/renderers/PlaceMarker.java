@@ -37,8 +37,8 @@ import java.nio.ShortBuffer;
 /**
  * Renders an object loaded from an OBJ file in OpenGL.
  */
-public class ObjectRenderer {
-  private static final String TAG = ObjectRenderer.class.getSimpleName();
+public class PlaceMarker {
+  private static final String TAG = PlaceMarker.class.getSimpleName();
 
   /**
    * Blend mode.
@@ -100,7 +100,7 @@ public class ObjectRenderer {
   private float mSpecular = 1.0f;
   private float mSpecularPower = 6.0f;
 
-  public ObjectRenderer() {
+  public PlaceMarker() {
   }
 
   /**
