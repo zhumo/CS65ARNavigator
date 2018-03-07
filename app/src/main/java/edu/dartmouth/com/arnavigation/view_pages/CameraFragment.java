@@ -402,19 +402,13 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 //                    Log.d("mztag", "Projected Ray Origin: " + tappedRay.origin.toString());
 //                    Log.d("mztag", "Projected Ray Direction: " + tappedRay.direction.toString());
                     if (nearbyPlace.isTapped(tappedRay)) {
-//                        Log.d("mztag", "Tapped!");
-//                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
+                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
                         // Raycasting may determine that multiple objects were tapped,
                         // esp. when objects are behind one another. Therefore, we take the first one and
                         // assume the user meant to tap it.
-//                        break;
+                        break;
                     }
                 }
-
-//                // Randomly select one, because raycasting doesn't work right now.
-//                int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
-//                NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
-//                placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
             }
 
             // Draw background.
@@ -427,21 +421,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                     Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
                     mAnchors.add(nearbyPlaceAnchor);
                 }
-
-//                // Use this when you need a test object right in front of you.
-//                Pose pose = new Pose(
-//                    new float[] {5.0f, 0.0f, 0.0f},
-//                    new float[] {0.0f, 0.0f, 0.0f, 1.0f}
-//                );
-//                Anchor testAnchor = mSession.createAnchor(pose);
-//                mAnchors.add(testAnchor);
-//
-//                Pose pose2 = new Pose(
-//                        new float[] {1.0f, 0.0f, 0.0f},
-//                        new float[] {0.0f, 0.0f, 0.0f, 1.0f}
-//                );
-//                Anchor testAnchor2 = mSession.createAnchor(pose2);
-//                mAnchors.add(testAnchor2);
 
                 nearbyPlacesChanged = false;
             }
