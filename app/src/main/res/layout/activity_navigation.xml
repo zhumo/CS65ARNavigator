@@ -34,6 +34,7 @@
             android:layout_height="match_parent"
             android:onClick="locationSearchPressed"
             android:text="Go" />
+
     </LinearLayout>
 
 

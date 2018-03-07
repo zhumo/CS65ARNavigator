@@ -104,21 +104,20 @@ public class LegObject {
         return longDiff;
     }
 
-    public float getDistance(LatLng userLocation){
+    public float getDistance(){
         float distance = 0;
         float[] result = new float[1];
-        Location.distanceBetween(userLocation.latitude, userLocation.longitude,
-                mWayPointsArray[0].latitude, mWayPointsArray[0].longitude, result);
 
-        distance += result[1];
+        if (mWayPointsArray.length > 1) {
 
-        for (int i = 1; i < mWayPointsArray.length -1; i++) {
-            LatLng thisLoc = mWayPointsArray[i];
-            LatLng nextLoc = mWayPointsArray[i + 1];
+            for (int i = 0; i < mWayPointsArray.length-1; i++) {
+                LatLng thisLoc = mWayPointsArray[i];
+                LatLng nextLoc = mWayPointsArray[i+1];
 
-            Location.distanceBetween(thisLoc.latitude, thisLoc.longitude, nextLoc.latitude, nextLoc.longitude, result);
+                Location.distanceBetween(thisLoc.latitude, thisLoc.longitude, nextLoc.latitude, nextLoc.longitude, result);
 
-            distance += result[1];
+                distance += result[0];
+            }
         }
 
         return distance;

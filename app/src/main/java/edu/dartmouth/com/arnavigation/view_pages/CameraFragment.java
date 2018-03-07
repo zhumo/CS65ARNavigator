@@ -16,8 +16,10 @@
 
 package edu.dartmouth.com.arnavigation.view_pages;
 
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -38,6 +40,7 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.model.LatLng;
@@ -144,6 +147,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     private float hanoverAltMeters = 528.0f; //Use Hanover's Altitude for now
 
+    TextView tv;
+
     private PlacesManager placesManager = PlacesManager.getInstance();
     private PlacesManager.OnPostNearbyPlacesRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostNearbyPlacesRequest() {
         @Override
@@ -235,6 +240,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
         rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
+
+
     }
 
     @Nullable
@@ -256,6 +263,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         mSurfaceView.setEGLConfigChooser(8, 8, 8, 8, 16, 0); // Alpha used for plane blending.
         mSurfaceView.setRenderer(this);
         mSurfaceView.setRenderMode(GLSurfaceView.RENDERMODE_CONTINUOUSLY);
+
+        tv = (TextView)fragmentView.findViewById(R.id.distanceText);
+        tv.setVisibility(View.INVISIBLE);
+        tv.setTextColor(Color.WHITE);
 
         return fragmentView;
     }
@@ -540,6 +551,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         /* Not implemented. Should remove any path drawings. */
         lineAnchor = null;
         isLineRendered = false;
+        tv.setVisibility(View.INVISIBLE);
     }
 
     public void createNewDirections(List<List<HashMap<String, String>>> path){
@@ -609,6 +621,13 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 lineRenderer.setLineIndices(leg.getIndices());
 
                 lineRenderer.printLine();
+
+
+
+
+
+
+
             }
 
             return "done";
@@ -617,6 +636,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         @Override
         protected void onPostExecute(String result){
             isLineCreated = true;
+            tv.setVisibility(View.VISIBLE);
+            int distance = (int)leg.getDistance();
+            String distanceText = "" + distance + " m";
+            tv.setText(distanceText);
         }
     }
 
