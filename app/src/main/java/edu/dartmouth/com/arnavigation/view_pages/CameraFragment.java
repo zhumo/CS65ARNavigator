@@ -163,25 +163,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             builder.show();
         }
     };
-    private PlacesManager.OnPostPlaceDetailsRequest receivePlaceDetailsResponseListener = new PlacesManager.OnPostPlaceDetailsRequest() {
-        @Override
-        public void onSuccessfulRequest(NearbyPlace nearbyPlace) {
-            Intent placeDetailsIntent = new Intent(getContext(), PlaceDetailsActivity.class);
-            placeDetailsIntent.putExtra(PlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
-            placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
-            placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
-            startActivity(placeDetailsIntent);
-        }
-
-        @Override
-        public void onUnsuccessfulRequest(String errorStatus, String errorMessage) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setTitle("Place Details Error");
-            builder.setMessage(errorMessage);
-            builder.setPositiveButton("OK", null);
-            builder.show();
-        }
-    };
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -422,15 +403,19 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
                 // Projected ray.
                 Ray tappedRay = TouchHelper.projectRay(
-                        new Vector2f(tappedXLoc, tappedYLoc),
-                        mSurfaceView.getMeasuredWidth(),
-                        mSurfaceView.getMeasuredHeight(),
-                        projmtx, viewmtx
+                    new Vector2f(tappedXLoc, tappedYLoc),
+                    mSurfaceView.getMeasuredWidth(),
+                    mSurfaceView.getMeasuredHeight(),
+                    projmtx, viewmtx
                 );
 
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
                     if (nearbyPlace.isTapped(tappedRay)) {
-                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
+                        Intent placeDetailsIntent = new Intent(getContext(), PlaceDetailsActivity.class);
+                        placeDetailsIntent.putExtra(PlaceDetailsActivity.PLACE_ID_KEY, nearbyPlace.placeId);
+                        placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
+                        placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
+                        startActivity(placeDetailsIntent);
                         // Raycasting may determine that multiple objects were tapped,
                         // esp. when objects are behind one another. Therefore, we take the first one and
                         // assume the user meant to tap it.
