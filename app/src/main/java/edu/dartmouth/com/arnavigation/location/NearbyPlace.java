@@ -14,6 +14,9 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 
+import edu.dartmouth.com.arnavigation.math.Ray;
+import edu.dartmouth.com.arnavigation.math.Vector3f;
+
 public class NearbyPlace {
     public double latitude;
     public double longitude;
@@ -26,6 +29,8 @@ public class NearbyPlace {
     public int photoHeight;
     public int photoWidth;
     public Bitmap imageBitmap;
+
+    public Pose pose;
 
     public NearbyPlace(JSONObject placeData) {
         try {
@@ -53,43 +58,53 @@ public class NearbyPlace {
     private float[] translationMatrix = new float[3];
     private final float[] rotationMatrix = new float[] {0f,0f,0f,0f}; // We don't need to rotate the place marker.
     public Pose getPose(LatLng startLatLng, float heading) {
-        Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
-        float distance = distanceResults[0];
-        float bearing = distanceResults[1];
-        float angle = bearing - heading;
-        float angleInRads = (float) Math.toRadians((double) angle);
+        if (pose == null) {
+            Location.distanceBetween(startLatLng.latitude, startLatLng.longitude, latitude, longitude, distanceResults);
+            float distance = distanceResults[0];
+            float bearing = distanceResults[1];
+            float angle = bearing - heading;
+            float angleInRads = (float) Math.toRadians((double) angle);
 
-        float xPos = (float) Math.cos(angleInRads) * distance;
-        if(xPos > 3.0f) {
-            xPos = 3.0f;
-        } else if(xPos < -3.0f) {
-            xPos = -3.0f;
-        }
-        float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
-        if(zPos > 3.0f) {
-            zPos = 3.0f;
-        } else if(zPos < -3.0f) {
-            zPos = -3.0f;
-        }
-        translationMatrix[0] = xPos;
-        translationMatrix[1] = 0.0f;
-        translationMatrix[2] = zPos;
+            float xPos = (float) Math.cos(angleInRads) * distance;
+            if(Math.abs(xPos) > 3.0f) {
+                xPos = 3.0f * Math.signum(xPos);
+            }
+            float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
+            if(Math.abs(zPos) > 3.0f) {
+                zPos = 3.0f * Math.signum(zPos);
+            }
+            translationMatrix[0] = xPos;
+            translationMatrix[1] = 0.0f;
+            translationMatrix[2] = zPos;
 
-        return new Pose(translationMatrix, rotationMatrix);
+            pose = new Pose(translationMatrix, rotationMatrix);
+        }
+
+        return pose;
     }
 
     private static float TOLERANCE = 0.5f;
-    public boolean isTapped(float[] worldCoordinates) {
-        float tappedXLoc = worldCoordinates[0];
-        float tappedYLoc = worldCoordinates[1];
+    public boolean isTapped(Ray tappedRay) {
+        // Pythagorean distance
+        float rayScale = (float) Math.sqrt(
+                pose.tx()*pose.tx() + pose.ty()*pose.ty() + pose.tz()*pose.tz()
+        );
+        // The operations below will change the object, which we want to preserve. Therefore,
+        // create copies of the relevant data
+        Vector3f origin = new Vector3f(tappedRay.origin);
+        Vector3f direction = new Vector3f(tappedRay.direction);
+        Vector3f destination = new Vector3f(origin);
+        Vector3f diff = new Vector3f(direction);
+        diff.scale(rayScale);
+        destination.add(diff);
 
-        float xLowerBound = translationMatrix[0] - TOLERANCE;
-        float xUpperBound = translationMatrix[0] + TOLERANCE;
-        float yLowerBound = translationMatrix[1] - TOLERANCE;
-        float yUpperBound = translationMatrix[1] + TOLERANCE;
+        float xLowerBound = pose.tx() - TOLERANCE;
+        float xUpperBound = pose.tx() + TOLERANCE;
+        float yLowerBound = pose.ty() - TOLERANCE;
+        float yUpperBound = pose.ty() + TOLERANCE;
 
-        boolean withinX = tappedXLoc < xUpperBound && tappedXLoc > xLowerBound;
-        boolean withinY = tappedYLoc < yUpperBound && tappedYLoc > yLowerBound;
+        boolean withinX = destination.x < xUpperBound && destination.x > xLowerBound;
+        boolean withinY = destination.y < yUpperBound && destination.y > yLowerBound;
 
         return withinX && withinY;
     }
