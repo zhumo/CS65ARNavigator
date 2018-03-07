@@ -66,16 +66,12 @@ public class NearbyPlace {
             float angleInRads = (float) Math.toRadians((double) angle);
 
             float xPos = (float) Math.cos(angleInRads) * distance;
-            if (xPos > 3.0f) {
-                xPos = 3.0f;
-            } else if (xPos < -3.0f) {
-                xPos = -3.0f;
+            if(Math.abs(xPos) > 3.0f) {
+                xPos = 3.0f * Math.signum(xPos);
             }
             float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
-            if (zPos > 3.0f) {
-                zPos = 3.0f;
-            } else if (zPos < -3.0f) {
-                zPos = -3.0f;
+            if(Math.abs(zPos) > 3.0f) {
+                zPos = 3.0f * Math.signum(zPos);
             }
             translationMatrix[0] = xPos;
             translationMatrix[1] = 0.0f;
@@ -93,21 +89,14 @@ public class NearbyPlace {
         float rayScale = (float) Math.sqrt(
                 pose.tx()*pose.tx() + pose.ty()*pose.ty() + pose.tz()*pose.tz()
         );
-
-//        Log.d("mztag", "Ray Scale: " + rayScale);
-
         // The operations below will change the object, which we want to preserve. Therefore,
-        // create copies of the relevant
+        // create copies of the relevant data
         Vector3f origin = new Vector3f(tappedRay.origin);
         Vector3f direction = new Vector3f(tappedRay.direction);
         Vector3f destination = new Vector3f(origin);
         Vector3f diff = new Vector3f(direction);
         diff.scale(rayScale);
         destination.add(diff);
-
-//        Log.d("mztag", "Diff: " + diff.toString());
-//        Log.d("mztag", "Destination: " + destination.toString());
-//        Log.d("mztag", "Pose: " + pose.toString());
 
         float xLowerBound = pose.tx() - TOLERANCE;
         float xUpperBound = pose.tx() + TOLERANCE;

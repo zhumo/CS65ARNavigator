@@ -395,12 +395,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                         mSurfaceView.getMeasuredHeight(),
                         projmtx, viewmtx
                 );
-//                Log.d("mztag", "Camera: " + camera.getPose().toString());
 
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
-//                    Log.d("mztag", "Place: " + nearbyPlace.name);
-//                    Log.d("mztag", "Projected Ray Origin: " + tappedRay.origin.toString());
-//                    Log.d("mztag", "Projected Ray Direction: " + tappedRay.direction.toString());
                     if (nearbyPlace.isTapped(tappedRay)) {
                         placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
                         // Raycasting may determine that multiple objects were tapped,
@@ -461,7 +457,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 }
                 anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
-                // Ball should be scaled down a lot.
                 mPlaceMarker.updateModelMatrix(mAnchorMatrix, 0.01f);
                 mPlaceMarker.draw(viewmtx, projmtx, lightIntensity);
             }
