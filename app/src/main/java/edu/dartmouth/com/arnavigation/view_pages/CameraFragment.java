@@ -22,6 +22,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.GeomagneticField;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.opengl.Matrix;
@@ -121,17 +122,24 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     private boolean isLineCreated = false; //determines if the line is set, if true -> set anchor in onDraw
     private boolean isLineRendered = false;
+    private boolean isLineRotated = true;
     private boolean nearbyPlacesChanged = false;
 
     //for getting heading using accelerometer and magnetometer
     private SensorManager sensorManager;
     private Sensor accelerometer;
     private Sensor magnetometer;
+    private Sensor rotationVectorSensor;
+    private float[] mOrientation = new float[3];
+    private float[] mRotationMatrix = new float[9];
     private float[] gravityData = new float[3];
     private float[] geomagneticData  = new float[3];
     private boolean hasGravityData = false;
     private boolean hasGeomagneticData = false;
     private double rotationInDegrees;
+    private float magneticDeclination = 0; //initialize at 0
+
+    private float hanoverAltMeters = 528.0f; //Use Hanover's Altitude for now
 
     private PlacesManager placesManager = PlacesManager.getInstance();
     private PlacesManager.OnPostNearbyPlacesRequest receiveNearbyPlacesResponseListener = new PlacesManager.OnPostNearbyPlacesRequest() {
@@ -222,6 +230,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         sensorManager = (SensorManager) getActivity().getSystemService(SENSOR_SERVICE);
         accelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+        rotationVectorSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR);
 
     }
 
@@ -258,8 +267,9 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         mSurfaceView.onResume();
         mDisplayRotationHelper.onResume();
 
-        sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
-        sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
+        //sensorManager.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
+        //sensorManager.registerListener(this, magnetometer, SensorManager.SENSOR_DELAY_GAME);
+        sensorManager.registerListener(this, rotationVectorSensor, SensorManager.SENSOR_DELAY_GAME);
 
         // Cause fragment to redraw the nearby places, since drawn objects are not saved on pause.
         nearbyPlacesChanged = true;
@@ -364,6 +374,17 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             frame = mSession.update();
             camera = frame.getCamera();
 
+            Pose camPose = camera.getPose();
+            double yRot = (double)camPose.qy();
+
+            yRot = Math.asin(yRot) * 2;
+            double dYrot = Math.toDegrees(yRot);
+
+            Log.d("Camera_POSE", camPose.toString());
+
+            //Log.d("CAMERA_Y_OFFSET", "Cam_QY: " + camPose.qy() + " RadYRot: " + yRot + " DegYRot: " + dYrot + " heading: " + mHeading);
+
+
             //Pose cameraPose = frame.getCamera().getPose();
             //Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
 
@@ -427,6 +448,14 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
                 Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
 
+                Log.d("LEG_POSE", leg.getLegPose().toString());
+
+//                Pose camXZOffset = cameraPose.compose(Pose.makeRotation(0, leg.getLegPose().qy(), 0, leg.getLegPose().qw()).extractRotation());
+//                Log.d("OFFSET_POSE", camXZOffset.toString());
+//
+//                Pose offsetPose = Pose.makeInterpolated(leg.getLegPose(), camXZOffset, 0.5f);
+//                Log.d("offset_int_pose", offsetPose.toString());
+
                 Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 1.0f);
                 Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
@@ -484,7 +513,15 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             //draw line with its anchor
             if (isLineRendered == true) {
                 lineAnchor.getPose().toMatrix(lineAnchorMatrix, 0);
-                lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor);
+
+                if (isLineRotated == false){
+                    lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor, leg.getRotation());
+                    isLineRotated = true;
+                }
+                else {
+                    lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor, 0);
+                }
+                Log.d("LEG_ANCHOR_POSE", lineAnchor.getPose().toString());
                 lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
             }
 
@@ -512,6 +549,8 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         if (mUserLatLng == null && newLatLng != null) {
             mUserLatLng = newLatLng;
             placesManager.getNearbyPlaces(mUserLatLng, receiveNearbyPlacesResponseListener);
+            GeomagneticField field = new GeomagneticField((float)mUserLatLng.latitude, (float)mUserLatLng.longitude, hanoverAltMeters, System.currentTimeMillis());
+            magneticDeclination = field.getDeclination();
         } else {
             mUserLatLng = newLatLng;
         }
@@ -608,12 +647,24 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
         switch (event.sensor.getType()) {
             case Sensor.TYPE_ACCELEROMETER:
                 System.arraycopy(event.values, 0, gravityData, 0, 3);
-                hasGravityData = true;
+                //hasGravityData = true;
                 break;
             case Sensor.TYPE_MAGNETIC_FIELD:
                 System.arraycopy(event.values, 0, geomagneticData, 0, 3);
-                hasGeomagneticData = true;
+                //hasGeomagneticData = true;
                 break;
+            case Sensor.TYPE_ROTATION_VECTOR:
+                //float[] rotationVector = event.values;
+                //float[] rotationV = new float[16];
+                SensorManager.getRotationMatrixFromVector(mRotationMatrix, event.values);
+
+                float azimuth = (float) Math.toDegrees(SensorManager.getOrientation(mRotationMatrix, mOrientation)[0]);
+
+                azimuth += magneticDeclination;
+
+                mHeading = (((azimuth % 360) + 360) % 360);
+
+                //Log.d("COMPASS_HEADING", "Heading: " + mHeading);
             default:
                 return;
         }
@@ -628,12 +679,16 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 float orientationMatrix[] = new float[3];
                 SensorManager.getOrientation(rotationMatrix, orientationMatrix);
                 float rotationInRadians = orientationMatrix[0];
-                rotationInDegrees = (Math.toDegrees(rotationInRadians) + 360) % 360;
+                rotationInDegrees = Math.toDegrees(rotationInRadians);
 
                 float currentDegree = (float) rotationInDegrees;
 
+                currentDegree = currentDegree + magneticDeclination; //for magnetic offset
+
+                currentDegree = (((currentDegree % 360) + 360) % 360); //to convert to 0-360
+
                 // do something with the rotation in degrees
-                //Log.d("COMPASS", "Heading: " + currentDegree);
+                //Log.d("COMPASS", "Heading: " + currentDegree + " declination: " + magneticDeclination);
                 mHeading = currentDegree;
             }
         }

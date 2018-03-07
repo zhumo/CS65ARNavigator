@@ -28,8 +28,9 @@ public class LegObject {
     private short[] indices;
     private float[]legVertices;
     private Pose legPose;
+    private float rotationAngle = 0;
 
-    private float latLngToScreenScale = 1000; //for now
+    private float latLngToScreenScale = 50; //for now
 
     public LegObject(LatLng[] leg){
         mWayPointsArray = leg;
@@ -101,6 +102,10 @@ public class LegObject {
         return longDiff;
     }
 
+    public float getRotation() {
+        return  rotationAngle;
+    }
+
     //returns the entire leg's vertices as a single float[6]
     //with reference to User Location
     public void setLegVerticesFromUserLatLng(LatLng userLatLng){
@@ -143,10 +148,18 @@ public class LegObject {
 
         double offsetRadians = offset * Math.PI / 180;
 
+        rotationAngle = (float)offsetRadians;
+
+        int wDirection = 1;
+        if (offset < 180) {
+            wDirection = -1;
+        }
+
+
         float xRot = 0;
         float yRot = (float)Math.sin(offsetRadians/2);
         float zRot = 0;
-        float wRot = (float)Math.cos(offsetRadians/2);
+        float wRot = (float)Math.cos(offsetRadians/2) * wDirection;
 
         Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360 + " heading: " + heading + " offset: " + offset + " offsetRadians: " + offsetRadians);
 
@@ -165,10 +178,10 @@ public class LegObject {
         float[] rotation = new float[4]; //quaternion rotation
         //calculate using heading ...
         //hardcode for now
-        rotation[0] = 0.0f;
-        rotation[1] = (float)Math.sin(offsetRadians/2); //y rotation of bearing
-        rotation[2] = 0.0f;
-        rotation[3] = (float)Math.cos(offsetRadians/2);
+        rotation[0] = xRot;
+        rotation[1] = yRot; //y rotation of bearing
+        rotation[2] = zRot;
+        rotation[3] = wRot;
 
         Log.d("LEG_POSE", "Leg pose translation \n x:" + translation[0] + " y:" + translation[1] + " z:" + translation[2]
                 + "\n Leg pose rotation \n x:" +rotation[0] + " y:" + rotation[1] + " z:" + rotation[2] + " w:" + rotation[3]);
@@ -205,7 +218,7 @@ public class LegObject {
         float dy = -1.0f;
         float dz;
 
-        float scaleFactor = 1.0f;
+        float scaleFactor = latLngToScreenScale;
 
         LatLng thisLatLng;
         LatLng lastLatLng = refLatLng;

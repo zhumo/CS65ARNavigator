@@ -15,6 +15,7 @@ import android.support.design.widget.FloatingActionButton;
 import android.support.v4.app.Fragment;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.RelativeLayout;
@@ -147,7 +148,7 @@ public class NavigationActivity extends AppCompatActivity {
 
 
         //set up places autocomplete
-        PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
+        final PlaceAutocompleteFragment autocompleteFragment = (PlaceAutocompleteFragment) getFragmentManager().findFragmentById(R.id.place_autocomplete_fragment);
         autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
             @Override
             public void onPlaceSelected(Place place) {
@@ -161,7 +162,19 @@ public class NavigationActivity extends AppCompatActivity {
             public void onError(Status status) {
                 Log.d("PLACE_ERROR", "Cannot find place with status: " + status.getStatusMessage());
             }
+
         });
+
+        autocompleteFragment.setHint("Choose your destination");
+        findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                resetButtonClicked(v);
+                autocompleteFragment.setText("");
+                autocompleteFragment.setHint("Choose your destination");
+            }
+        });
+
 
     }
 

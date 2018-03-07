@@ -376,7 +376,12 @@ public class Line {
         ShaderUtil.checkGLError("AFTER_DRAW", "After draw");
     }
 
-    public void updateModelMatrix(float[] modelMatrix, float scaleFactor) {
+    public void updateModelMatrix(float[] modelMatrix, float scaleFactor, float rotation) {
+
+        if (rotation != 0){
+            Matrix.rotateM(mModelMatrix, 0, rotation, 0f, 1f, 0f);
+        }
+
         float[] scaleMatrix = new float[16];
         Matrix.setIdentityM(scaleMatrix, 0);
         scaleMatrix[0] = scaleFactor;
