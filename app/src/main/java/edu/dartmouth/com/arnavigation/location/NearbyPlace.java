@@ -66,12 +66,12 @@ public class NearbyPlace {
             float angleInRads = (float) Math.toRadians((double) angle);
 
             float xPos = (float) Math.cos(angleInRads) * distance;
-            if(Math.abs(xPos) > 3.0f) {
-                xPos = 3.0f * Math.signum(xPos);
+            if(Math.abs(xPos) > 10.0f) {
+                xPos = 10.0f * Math.signum(xPos);
             }
             float zPos = (float) Math.sin(angleInRads) * distance * -1.0f;
-            if(Math.abs(zPos) > 3.0f) {
-                zPos = 3.0f * Math.signum(zPos);
+            if(Math.abs(zPos) > 10.0f) {
+                zPos = 10.0f * Math.signum(zPos);
             }
             translationMatrix[0] = xPos;
             translationMatrix[1] = 0.0f;
@@ -83,7 +83,7 @@ public class NearbyPlace {
         return pose;
     }
 
-    private static float TOLERANCE = 0.5f;
+    private static float TOLERANCE = 2.0f;
     public boolean isTapped(Ray tappedRay) {
         // Pythagorean distance
         float rayScale = (float) Math.sqrt(
