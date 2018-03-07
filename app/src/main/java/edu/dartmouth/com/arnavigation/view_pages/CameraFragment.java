@@ -398,7 +398,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
             // Get projection matrix.
             float[] projmtx = new float[16];
-            camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+            camera.getProjectionMatrix(projmtx, 0, 0.1f, 2000.0f);
 
             // Get camera matrix and draw.
             float[] viewmtx = new float[16];

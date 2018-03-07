@@ -32,6 +32,8 @@ public class LegObject {
 
     private float latLngToScreenScale = 50; //for now
 
+    private float distance;
+
     public LegObject(LatLng[] leg){
         mWayPointsArray = leg;
     }
@@ -100,6 +102,14 @@ public class LegObject {
         }
 
         return longDiff;
+    }
+
+    public float getDistance(LatLng userLocation){
+        float[] result = new float[1];
+        Location.distanceBetween(userLocation.latitude, userLocation.longitude,
+                mWayPointsArray[mWayPointsArray.length-1].latitude, mWayPointsArray[mWayPointsArray.length-1].longitude, result);
+
+        return result[1];
     }
 
     public float getRotation() {
