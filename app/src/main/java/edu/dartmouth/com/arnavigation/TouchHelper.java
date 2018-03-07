@@ -1,3 +1,5 @@
+// Adapted from https://github.com/googlecreativelab/ar-drawing-java/
+
 package edu.dartmouth.com.arnavigation;
 
 import android.opengl.Matrix;
@@ -7,13 +9,6 @@ import edu.dartmouth.com.arnavigation.math.Vector2f;
 import edu.dartmouth.com.arnavigation.math.Vector3f;
 
 public class TouchHelper {
-    public static Vector3f GetWorldCoords(Vector2f touchPoint, float screenWidth, float screenHeight, float[] projectionMatrix, float[] viewMatrix) {
-        Ray touchRay = projectRay(touchPoint, screenWidth, screenHeight, projectionMatrix, viewMatrix);
-        touchRay.direction.scale(0.5f);
-        touchRay.origin.add(touchRay.direction);
-        return touchRay.origin;
-    }
-
     public static Ray projectRay(Vector2f touchPoint, float screenWidth, float screenHeight, float[] projectionMatrix, float[] viewMatrix) {
         float[] viewProjMtx = new float[16];
         Matrix.multiplyMM(viewProjMtx, 0, projectionMatrix, 0, viewMatrix, 0);

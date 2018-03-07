@@ -15,6 +15,7 @@ import org.json.JSONObject;
 import java.util.HashMap;
 
 import edu.dartmouth.com.arnavigation.math.Ray;
+import edu.dartmouth.com.arnavigation.math.Vector3f;
 
 public class NearbyPlace {
     public double latitude;
@@ -88,20 +89,33 @@ public class NearbyPlace {
 
     private static float TOLERANCE = 0.5f;
     public boolean isTapped(Ray tappedRay) {
-        tappedRay.direction.scale(pose.tz());
-        tappedRay.origin.add(tappedRay.direction);
+        // Pythagorean distance
+        float rayScale = (float) Math.sqrt(
+                pose.tx()*pose.tx() + pose.ty()*pose.ty() + pose.tz()*pose.tz()
+        );
 
-        Log.d("mztag", "Pose: " + pose.toString());
-        Log.d("mztag", "Projected Ray Origin: (" + tappedRay.origin.x + ", " + tappedRay.origin.y + ", " + tappedRay.origin.z + ")");
-        Log.d("mztag", "Projected Ray Direction: (" + tappedRay.direction.x + ", " + tappedRay.direction.y + ", " + tappedRay.direction.z + ")");
+//        Log.d("mztag", "Ray Scale: " + rayScale);
+
+        // The operations below will change the object, which we want to preserve. Therefore,
+        // create copies of the relevant
+        Vector3f origin = new Vector3f(tappedRay.origin);
+        Vector3f direction = new Vector3f(tappedRay.direction);
+        Vector3f destination = new Vector3f(origin);
+        Vector3f diff = new Vector3f(direction);
+        diff.scale(rayScale);
+        destination.add(diff);
+
+//        Log.d("mztag", "Diff: " + diff.toString());
+//        Log.d("mztag", "Destination: " + destination.toString());
+//        Log.d("mztag", "Pose: " + pose.toString());
 
         float xLowerBound = pose.tx() - TOLERANCE;
         float xUpperBound = pose.tx() + TOLERANCE;
         float yLowerBound = pose.ty() - TOLERANCE;
         float yUpperBound = pose.ty() + TOLERANCE;
 
-        boolean withinX = tappedRay.origin.x < xUpperBound && tappedRay.origin.x > xLowerBound;
-        boolean withinY = tappedRay.origin.y < yUpperBound && tappedRay.origin.y > yLowerBound;
+        boolean withinX = destination.x < xUpperBound && destination.x > xLowerBound;
+        boolean withinY = destination.y < yUpperBound && destination.y > yLowerBound;
 
         return withinX && withinY;
     }

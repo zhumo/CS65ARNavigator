@@ -374,55 +374,47 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             //Log.d("CAMERA_Y", "yRotation: " + cameraYRot);
             // Handle taps. Handling only one tap per frame, as taps are usually low frequency
             // compared to frame rate.
+
+            // Get projection matrix.
+            float[] projmtx = new float[16];
+            camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
+
+            // Get camera matrix and draw.
+            float[] viewmtx = new float[16];
+            camera.getViewMatrix(viewmtx, 0);
+
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 float tappedXLoc = tap.getX();
                 float tappedYLoc = tap.getY();
 
-                // Get projection matrix.
-                float[] projmtx = new float[16];
-                camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
-
-                // Get camera matrix and draw.
-                float[] viewmtx = new float[16];
-                camera.getViewMatrix(viewmtx, 0);
-
-                for(Anchor anchor : mAnchors) {
-                    Ray tappedRay = TouchHelper.projectRay(
-                            new Vector2f(tappedXLoc, tappedYLoc),
-                            mSurfaceView.getMeasuredWidth(),
-                            mSurfaceView.getMeasuredHeight(),
-                            projmtx, viewmtx
-                    );
-
-                    Pose pose = anchor.getPose();
-                    float scaleFactor = (float) Math.sqrt(pose.tz() * pose.tz() + pose.tx() * pose.tx());
-                    tappedRay.direction.scale(-1.0f * scaleFactor);
-                    tappedRay.origin.add(tappedRay.direction);
-
-                    Log.d("mztag", "Pose: " + pose.toString());
-                    Log.d("mztag", "Projected Ray Origin: (" + tappedRay.origin.x + ", " + tappedRay.origin.y + ", " + tappedRay.origin.z + ")");
-                    Log.d("mztag", "Projected Ray Direction: (" + tappedRay.direction.x + ", " + tappedRay.direction.y + ", " + tappedRay.direction.z + ")");
-                }
+                // Projected ray.
+                Ray tappedRay = TouchHelper.projectRay(
+                        new Vector2f(tappedXLoc, tappedYLoc),
+                        mSurfaceView.getMeasuredWidth(),
+                        mSurfaceView.getMeasuredHeight(),
+                        projmtx, viewmtx
+                );
+//                Log.d("mztag", "Camera: " + camera.getPose().toString());
 
                 for(NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
-//                     The screen to world conversion isn't working right now. So coerce to false.
-//                    if (nearbyPlace.isTapped(tappedRay)) {
-//                        // TODO: ideally, this would figure out the nearest one (based on z translation).
-//                        Log.d("mztag", "tapped!");
-////                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
-//
-//                        // Raycasting may determine that multiple objects were tapped,
-//                        // esp. when objects are behind one another. Therefore, we take the first one and
-//                        // assume the user meant to tap it.
+//                    Log.d("mztag", "Place: " + nearbyPlace.name);
+//                    Log.d("mztag", "Projected Ray Origin: " + tappedRay.origin.toString());
+//                    Log.d("mztag", "Projected Ray Direction: " + tappedRay.direction.toString());
+                    if (nearbyPlace.isTapped(tappedRay)) {
+//                        Log.d("mztag", "Tapped!");
+//                        placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
+                        // Raycasting may determine that multiple objects were tapped,
+                        // esp. when objects are behind one another. Therefore, we take the first one and
+                        // assume the user meant to tap it.
 //                        break;
-//                    }
+                    }
                 }
 
-                // Randomly select one, because raycasting doesn't work right now.
-                int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
-                NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
-                placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
+//                // Randomly select one, because raycasting doesn't work right now.
+//                int placeIndex = (int) (Math.floor(placesManager.nearbyPlaces.size() * Math.random()));
+//                NearbyPlace nearbyPlace = placesManager.nearbyPlaces.get(placeIndex);
+//                placesManager.getPlaceDetails(nearbyPlace, receivePlaceDetailsResponseListener);
             }
 
             // Draw background.
@@ -430,26 +422,26 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
             if(nearbyPlacesChanged || mAnchors.size() < placesManager.nearbyPlaces.size()) {
                 mAnchors.clear();
-//                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
-//                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
-//                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
-//                    mAnchors.add(nearbyPlaceAnchor);
-//                }
+                for (NearbyPlace nearbyPlace : placesManager.nearbyPlaces) {
+                    Pose poseForNearbyPlace = nearbyPlace.getPose(mUserLatLng, mHeading);
+                    Anchor nearbyPlaceAnchor = mSession.createAnchor(poseForNearbyPlace);
+                    mAnchors.add(nearbyPlaceAnchor);
+                }
 
-                // Use this when you need a test object right in front of you.
-                Pose pose = new Pose(
-                    new float[] {0.0f, 0.0f, -1.0f},
-                    new float[] {0.0f, 0.0f, 0.0f, 1.0f}
-                );
-                Anchor testAnchor = mSession.createAnchor(pose);
-                mAnchors.add(testAnchor);
-
-                Pose pose2 = new Pose(
-                        new float[] {1.0f, 0.0f, 0.0f},
-                        new float[] {0.0f, 0.0f, 0.0f, 1.0f}
-                );
-                Anchor testAnchor2 = mSession.createAnchor(pose2);
-                mAnchors.add(testAnchor2);
+//                // Use this when you need a test object right in front of you.
+//                Pose pose = new Pose(
+//                    new float[] {5.0f, 0.0f, 0.0f},
+//                    new float[] {0.0f, 0.0f, 0.0f, 1.0f}
+//                );
+//                Anchor testAnchor = mSession.createAnchor(pose);
+//                mAnchors.add(testAnchor);
+//
+//                Pose pose2 = new Pose(
+//                        new float[] {1.0f, 0.0f, 0.0f},
+//                        new float[] {0.0f, 0.0f, 0.0f, 1.0f}
+//                );
+//                Anchor testAnchor2 = mSession.createAnchor(pose2);
+//                mAnchors.add(testAnchor2);
 
                 nearbyPlacesChanged = false;
             }
@@ -474,27 +466,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 isLineRendered = true;
             }
 
-
-
-//            Matrix.setLookAtM(mViewMatrix, 0, 0, 0, -5, 0f, 0f, 0f, 0f, 1.0f, 0f );
-//            Matrix.multiplyMM(mMVPMatrix, 0, mProjectionMatrix, 0, mViewMatrix, 0);
-//
-//            if (lineRenderer.getSize() > 0) {
-//                lineRenderer.draw(mMVPMatrix);
-//            }
-
             // If not tracking, don't draw 3d objects.
             if (camera.getTrackingState() == TrackingState.PAUSED) {
                 return;
             }
-
-            // Get projection matrix.
-            float[] projmtx = new float[16];
-            camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
-
-            // Get camera matrix and draw.
-            float[] viewmtx = new float[16];
-            camera.getViewMatrix(viewmtx, 0);
 
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
@@ -672,49 +647,5 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     }
 
     @Override
-    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-    }
-
-    // from: https://github.com/google-ar/arcore-android-sdk/issues/147
-    private float[] screenPointToWorldRay(float xPx, float yPx, Camera camera) {
-        float[] clip = new float[4];  // {clip query, camera query, camera origin}
-        // Set up the clip-space coordinates of our query point
-        // +x is right:
-        clip[0] = 2.0f * xPx / mSurfaceView.getMeasuredWidth() - 1.0f;
-        // +y is up (android UI Y is down):
-        clip[1] = 1.0f - 2.0f * yPx / mSurfaceView.getMeasuredHeight();
-        clip[2] = 1.0f; // +z is forwards (remember clip, not camera)
-        clip[3] = 1.0f; // w (homogenous coordinates)
-
-        float[] origin = new float[] {0, 0, 0, 1};
-
-        // Get projection matrix.
-        float[] projmtx = new float[16];
-        camera.getProjectionMatrix(projmtx, 0, 0.1f, 100.0f);
-        if(!Matrix.invertM(projmtx, 0, projmtx, 0)) {
-            throw new RuntimeException("InverseProjMatrix failed");
-        }
-
-        // Get camera matrix and draw.
-        float[] viewmtx = new float[16];
-        camera.getViewMatrix(viewmtx, 0);
-        if(!Matrix.invertM(viewmtx, 0, viewmtx, 0)) {
-            throw new RuntimeException("InverseViewMatrix failed");
-        }
-
-        float[] matrix = new float[16];
-        Matrix.multiplyMM(matrix, 0, viewmtx, 0, projmtx, 0);
-
-        float[] translatedOrigin = new float[4];
-        Matrix.multiplyMV(translatedOrigin, 0, matrix, 0, origin, 0);
-
-        float[] translatedClip = new float[4];
-        Matrix.multiplyMV(translatedClip, 0, matrix, 0, clip, 0);
-
-        return new float[] {
-                translatedOrigin[0], translatedOrigin[1], translatedOrigin[2], translatedOrigin[3],
-                translatedClip[0], translatedClip[1], translatedClip[2], translatedClip[3]
-        };
-    }
+    public void onAccuracyChanged(Sensor sensor, int accuracy) { /* NOOP */ }
 }
