@@ -27,18 +27,26 @@ public class PlaceDetailsActivity extends AppCompatActivity {
         String placeID = getIntent().getExtras().getString(PLACE_ID_KEY);
         NearbyPlace place = placesManager.getPlaceByPlaceID(placeID);
 
+        placesManager.getPlaceDetails(place, new PlacesManager.OnPostPlaceDetailsRequest() {
+            @Override
+            public void onSuccessfulRequest(NearbyPlace place) {
+                ImageView placeImage = findViewById(R.id.place_image);
+                if(place.photoReference == null) {
+                    placeImage.setImageResource(R.drawable.photo_not_available);
+                } else {
+                    placeImage.setImageBitmap(place.imageBitmap);
+                }
+            }
+
+            @Override
+            public void onUnsuccessfulRequest(String errorStatus, String errorMessage) { /* NOOP */ }
+        });
+
         TextView nameLabel = findViewById(R.id.place_name);
         nameLabel.setText(place.name);
 
         TextView addressLabel = findViewById(R.id.place_address);
         addressLabel.setText(place.vicinity);
-
-        ImageView placeImage = findViewById(R.id.place_image);
-        if(place.photoReference == null) {
-            placeImage.setImageResource(R.drawable.photo_not_available);
-        } else {
-            placeImage.setImageBitmap(place.imageBitmap);
-        }
 
         TextView distanceLabel = findViewById(R.id.place_distance);
         float[] distance = new float[1];
