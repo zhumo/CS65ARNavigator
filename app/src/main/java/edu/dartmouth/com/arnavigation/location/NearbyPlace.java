@@ -65,6 +65,10 @@ public class NearbyPlace {
             float angle = bearing - heading;
             float angleInRads = (float) Math.toRadians((double) angle);
 
+            // Currently, we are coercing any location that is too
+            // far away to be at max 3 units within any direction. This
+            // is a pretty blunt rule that messes up the placement of the markers.
+            // TODO: Once you figure out the best algorithm to dynamically scale the marker, get rid of this constraint.
             float xPos = (float) Math.cos(angleInRads) * distance;
             if(Math.abs(xPos) > 10.0f) {
                 xPos = 10.0f * Math.signum(xPos);

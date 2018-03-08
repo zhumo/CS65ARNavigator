@@ -20,6 +20,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
+import android.graphics.Point;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
@@ -342,9 +343,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             frame = mSession.update();
             camera = frame.getCamera();
 
-            // Handle taps. Handling only one tap per frame, as taps are usually low frequency
-            // compared to frame rate.
-
             // Get projection matrix.
             float[] projmtx = new float[16];
             camera.getProjectionMatrix(projmtx, 0, 0.1f, 2000.0f);
@@ -353,6 +351,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             float[] viewmtx = new float[16];
             camera.getViewMatrix(viewmtx, 0);
 
+            // Respond to tap events.
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 float tappedXLoc = tap.getX();
@@ -373,6 +372,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                         placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
                         placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
                         startActivity(placeDetailsIntent);
+
                         // Raycasting may determine that multiple objects were tapped,
                         // esp. when objects are behind one another. Therefore, we take the first one and
                         // assume the user meant to tap it.
@@ -416,20 +416,24 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
 
-            // Visualize anchors created by touch.
-            float scaleFactor = 1.0f;
+            // Draw place markers created by touch.
             for (Anchor anchor : mAnchors) {
                 if (anchor.getTrackingState() != TrackingState.TRACKING) {
                     continue;
                 }
-                anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
+                anchor.getPose().toMatrix(mAnchorMatrix, 0);
+                // figure out a good algorithm to calculate the scaling factor dynamically based on the anchor's
+                // distance from the camera. Unfortunately, until that time, hardcode the scale factor.
+                // Alternatively, could explore ways to implement bounded scaling inside the PlaceMarker renderer.
                 mPlaceMarker.updateModelMatrix(mAnchorMatrix, 0.01f);
+//                mPlaceMarker.updateModelMatrix(mAnchorMatrix, calculateScaleFactor(anchor.getPose(), camera.getPose()));
                 mPlaceMarker.draw(viewmtx, projmtx, lightIntensity);
             }
 
             //draw line with its anchor
             if (isLineRendered == true) {
+                float scaleFactor = 1.0f;
                 lineAnchor.getPose().toMatrix(lineAnchorMatrix, 0);
 
                 if (isLineRotated == false){
@@ -439,13 +443,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 else {
                     lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor, 0);
                 }
-                Log.d("LEG_ANCHOR_POSE", lineAnchor.getPose().toString());
                 lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
             }
 
 
         } catch (Throwable t) {
-            // Avoid crashing the application due to unhandled exceptions.
             Log.e(TAG, "Exception on the OpenGL thread", t);
         }
     }
@@ -584,4 +586,24 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
 
     @Override
     public void onAccuracyChanged(Sensor sensor, int accuracy) { /* NOOP */ }
+
+    private static float BASE_SCALE_FACTOR = 1.0f;
+    private static float MIN_SCALE_FACTOR = 0.001f;
+    private float calculateScaleFactor(Pose anchorPose, Pose cameraPose) {
+        float xdiff = anchorPose.tx() - cameraPose.tx();
+        // float ydiff ... Ignore because all Ys for placemarkers are set to 1.
+        float zdiff = anchorPose.tz() - cameraPose.tz();
+
+        // Scale factor decreases as the distance between camera and anchor rises
+        // but not at a fixed rate. Using sqrt will create some kind of lower bound.
+        float scaleFactor = BASE_SCALE_FACTOR / (float) Math.sqrt(xdiff*xdiff + zdiff*zdiff);
+
+        // Force scale factor to be at least the min. We don't want the markers to be too small.
+        scaleFactor = Math.max(scaleFactor, MIN_SCALE_FACTOR);
+
+        // Force scale factor to be at most the base factor. We don't want the markers to be too large.
+        scaleFactor = Math.min(scaleFactor, BASE_SCALE_FACTOR);
+
+        return scaleFactor;
+    }
 }
