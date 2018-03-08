@@ -40,11 +40,6 @@ import edu.dartmouth.com.arnavigation.view_pages.ViewPagerAdapter;
 
 public class NavigationActivity extends AppCompatActivity {
 
-    private static final String[] TRAVEL_ENTRIES = {"Walking", "Driving"};
-
-    //private EditText mLocationSearchText;
-    private Spinner travelSpinner;
-
 
     private DirectionsManager directionsManager;
 
@@ -65,9 +60,6 @@ public class NavigationActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_navigation);
-
-        // get destination input
-        //mLocationSearchText = findViewById(R.id.locationSearchText);
 
         updateLocationReceiver = new BroadcastReceiver() {
             @Override
@@ -165,6 +157,7 @@ public class NavigationActivity extends AppCompatActivity {
 
         });
 
+        //set up Places API autocomplete for destination search
         autocompleteFragment.setHint("Choose your destination");
         findViewById(R.id.place_autocomplete_clear_button).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -220,17 +213,9 @@ public class NavigationActivity extends AppCompatActivity {
             return;
         }
 
-        //close search text if still open
-        //InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        //imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
-
         //disable search button
         Button searchButton = findViewById(R.id.searchButton);
         searchButton.setEnabled(false);
-
-        //if address, get geocode
-        //assume address for now
-        //String address = mLocationSearchText.getText().toString();
 
         //pass to DirectionsManager address function
         directionsManager.getDirectionsWithAddress(currentLatLng, placeAddress);
@@ -239,9 +224,6 @@ public class NavigationActivity extends AppCompatActivity {
     public void resetButtonClicked(View v) {
         navigationMapFragment.reset();
         cameraFragment.reset();
-
-        //InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-        //imm.hideSoftInputFromWindow(mLocationSearchText.getWindowToken(), 0);
 
         Button searchButton = findViewById(R.id.searchButton);
         searchButton.setEnabled(true);

@@ -21,9 +21,6 @@ public class LegObject {
 
     private LatLng[] mWayPointsArray;
 
-    private FloatBuffer translationBuffer;
-    private ShortBuffer indexBuffer;
-
     private float[] vertices;
     private short[] indices;
     private float[]legVertices;
@@ -53,14 +50,6 @@ public class LegObject {
         else return null;
     }
 
-    public FloatBuffer getTranslationBuffer(){
-        return translationBuffer;
-    }
-
-    public ShortBuffer getIndexBuffer(){
-        return indexBuffer;
-    }
-
     public int getCount(){
         return mWayPointsArray.length;
     }
@@ -76,34 +65,8 @@ public class LegObject {
     public Pose getLegPose(){
         return legPose;
     }
-    //gets lat difference of leg. Negative value means southbound, Positive means northbound
-    public double getLatitudeDifference(){
-        double latDiff = 0;
-        double lastLat = mWayPointsArray[0].latitude;
 
-        for (int i = 1; i < mWayPointsArray.length; i++){
-            double thisLat = mWayPointsArray[i].latitude;
-            latDiff += thisLat - lastLat;
-            lastLat = thisLat;
-        }
-
-        return latDiff;
-    }
-
-    //gets longitude difference of leg. Negative value means eastbound, Positive means westbound
-    public double getLongitudeDifference(){
-        double longDiff = 0;
-        double lastLon = mWayPointsArray[0].longitude;
-
-        for (int i = 0; i < mWayPointsArray.length; i++){
-            double thisLon = mWayPointsArray[i].longitude;
-            longDiff += thisLon - lastLon;
-            lastLon = thisLon;
-        }
-
-        return longDiff;
-    }
-
+    //returns total path distance
     public float getDistance(){
         float distance = 0;
         float[] result = new float[1];
@@ -129,6 +92,7 @@ public class LegObject {
 
     //returns the entire leg's vertices as a single float[6]
     //with reference to User Location
+    //used if rendering as User travels
     public void setLegVerticesFromUserLatLng(LatLng userLatLng){
         float[] vertices = new float[6];
 
@@ -184,12 +148,8 @@ public class LegObject {
 
         Log.d("Bearing to first", "Bearing: " + bearing + " Bearing360: " + bearing360 + " heading: " + heading + " offset: " + offset + " offsetRadians: " + offsetRadians);
 
-        //Log.d("PATH_POSE", "xRot: " + xRot + " yRot: " + yRot + " zRot: " + zRot + " wRot: " + wRot);
-
         float quaternionProof = (xRot * xRot) + (yRot * yRot) + (zRot * zRot) + (wRot * wRot);
         Log.d("QUATERNION_PROOF", "This value should equal 1: " + quaternionProof);
-
-        //Log.d("RESULTS_LOCATION", "Distance: " + results[0] + " bearing: " + bearing);
 
         float[] translation = new float[3]; //three dimensional translation
         translation[0] = 0.0f; //(float)(distance * Math.cos(bearing));
@@ -252,19 +212,6 @@ public class LegObject {
 
             thisLatLng = mWayPointsArray[i];
 
-//            Location.distanceBetween(lastLatLng.latitude, lastLatLng.longitude, thisLatLng.latitude, thisLatLng.longitude, results);
-//            distance = results[0];
-//            bearingFloat = results[1];
-//            bearingFloat = (((bearingFloat % 360) + 360) % 360);
-////            relativeAngle = (double) bearingFloat - heading;
-////
-//            bearingRadians = (double)(bearingFloat * Math.PI / 180);
-//
-//            dx = (float)(distance * Math.sin(bearingRadians));
-//            dz = (float)(distance * Math.cos(bearingRadians));
-//
-//            Log.d("LOCATION_CALC", "Distance: " + distance + " bearing: " + bearingFloat + " dx: " + dx + " dz: " + dz);
-
             double thisLatInMeters = getLatInMeters(thisLatLng.latitude);
             double thisLonInMeters = getLonInMeters(thisLatLng.longitude);
 
@@ -282,20 +229,6 @@ public class LegObject {
             vertices[j+1] = dy * scaleFactor;
             vertices[j+2] = dz * scaleFactor;
 
-
-//
-//            vertices[j] = (float)(distance * Math.cos(relativeAngle));
-//            vertices[j+1] = -0.5f;
-//            vertices[j+2] = (float)(distance * Math.sin(relativeAngle));
-
-
-//            latDiff = mWayPointsArray[i].latitude - startLat;
-//            lonDiff = mWayPointsArray[i].longitude - startLon;
-//
-//            vertices[j] = (float)latDiff * latLngToScreenScale;
-//            vertices[j+1] = -0.3f;
-//            vertices[j+2] = (float)lonDiff * latLngToScreenScale;
-
             if (i < mWayPointsArray.length - 1){
                 int k = i*2;
                 indices[k] = (short)i;
@@ -303,21 +236,6 @@ public class LegObject {
                 indices[k+1] = (short)ii;
             }
         }
-
-//        ByteBuffer bbf = ByteBuffer.allocateDirect(vertices.length * 4); //4 bytes per float
-//        ByteBuffer bbi = ByteBuffer.allocateDirect(indices.length * 2); //2 bytes per short
-//
-//        bbf.order(ByteOrder.nativeOrder());
-//        bbi.order(ByteOrder.nativeOrder());
-//
-//        translationBuffer = bbf.asFloatBuffer();
-//        indexBuffer = bbi.asShortBuffer();
-//
-//        translationBuffer.put(vertices);
-//        indexBuffer.put(indices);
-//
-//        translationBuffer.position(0);
-//        indexBuffer.position(0);
     }
 
 

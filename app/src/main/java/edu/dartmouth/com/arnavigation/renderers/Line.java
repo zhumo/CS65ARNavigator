@@ -81,25 +81,8 @@ public class Line {
     private int mModelViewUniform;
     private int mModelViewProjectionUniform;
 
-    // Shader location: environment properties.
-    private int mLightingParametersUniform;
-
-    // Shader location: material properties.
-    private int mMaterialParametersUniform;
-
-
-    // Set some default material properties to use for lighting.
-    private float mAmbient = 0.3f;
-    private float mDiffuse = 1.0f;
-    private float mSpecular = 1.0f;
-    private float mSpecularPower = 6.0f;
-
     //line width
     private float LINE_WIDTH = 100.0f;
-
-    // Note: the last component must be zero to avoid applying the translational part of the matrix.
-    private static final float[] LIGHT_DIRECTION = new float[]{0.250f, 0.866f, 0.433f, 0.0f};
-    private float[] mViewLightDirection = new float[4];
 
     private String TAG = Line.class.getSimpleName();
 
@@ -137,9 +120,6 @@ public class Line {
 
         mModelViewUniform = GLES20.glGetUniformLocation(mProgram, "u_ModelView");
         mModelViewProjectionUniform = GLES20.glGetUniformLocation(mProgram, "u_ModelViewProjection");
-
-        mLightingParametersUniform = GLES20.glGetUniformLocation(mProgram, "u_LightingParameters");
-        mMaterialParametersUniform = GLES20.glGetUniformLocation(mProgram, "u_MaterialParameters");
 
         Matrix.setIdentityM(mModelMatrix, 0);
     }
@@ -250,6 +230,7 @@ public class Line {
         GLES20.glDisableVertexAttribArray(mPositionHandle);
     }
 
+    //used to draw a path with triangles and an index buffer
     public void drawWithIndices(float[] cameraView, float[] cameraPerspective, float lightIntensity) {
 
         ShaderUtil.checkGLError("BEFORE_DRAW", "Before draw");
@@ -263,24 +244,12 @@ public class Line {
 
 
         // Set the vertex attributes.
-        //GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBufferId);
         // get handle to vertex shader's vPosition member
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "a_Position");
-        // GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
 
         // Set the vertex attributes.
         GLES20.glVertexAttribPointer(
                 mPositionHandle, VERTEX_SIZE, GLES20.GL_FLOAT, false, VERTEX_BYTE_SIZE, vertexBuffer);
-
-        // Set the lighting environment properties.
-//        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
-//        normalizeVec3(mViewLightDirection);
-//        GLES20.glUniform4f(mLightingParametersUniform,
-//                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
-//
-//        // Set the object material properties.
-//        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
-//                mSpecularPower);
 
         // get handle to fragment shader's vColor member
         mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
@@ -313,8 +282,7 @@ public class Line {
     }
 
 
-
-
+    //used to draw a line with no index buffer
     public void drawNoIndices(float[] cameraView, float[] cameraPerspective, float lightIntensity) {
 
         ShaderUtil.checkGLError("BEFORE_DRAW", "Before draw");
@@ -328,24 +296,13 @@ public class Line {
 
 
         // Set the vertex attributes.
-        //GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, vertexBufferId);
         // get handle to vertex shader's vPosition member
         mPositionHandle = GLES20.glGetAttribLocation(mProgram, "a_Position");
-        // GLES20.glBindBuffer(GLES20.GL_ARRAY_BUFFER, 0);
 
         // Set the vertex attributes.
         GLES20.glVertexAttribPointer(
                 mPositionHandle, VERTEX_SIZE, GLES20.GL_FLOAT, false, VERTEX_BYTE_SIZE, vertexBuffer);
 
-        // Set the lighting environment properties.
-//        Matrix.multiplyMV(mViewLightDirection, 0, mModelViewMatrix, 0, LIGHT_DIRECTION, 0);
-//        normalizeVec3(mViewLightDirection);
-//        GLES20.glUniform4f(mLightingParametersUniform,
-//                mViewLightDirection[0], mViewLightDirection[1], mViewLightDirection[2], lightIntensity);
-//
-//        // Set the object material properties.
-//        GLES20.glUniform4f(mMaterialParametersUniform, mAmbient, mDiffuse, mSpecular,
-//                mSpecularPower);
 
         // get handle to fragment shader's vColor member
         mColorHandle = GLES20.glGetUniformLocation(mProgram, "vColor");
@@ -428,9 +385,6 @@ public class Line {
             Log.d("Index Connection", indexString);
         }
 
-
-//        Log.d("LINE_VERTICES", "First vertex: "+ lineVertices[0] + ", " + lineVertices[1] + ", " + lineVertices[2]
-//                + "\n Second vertex: " + lineVertices[3] + ", " + lineVertices[4] + ", " + lineVertices[5]);
     }
 
     public int getSize(){
