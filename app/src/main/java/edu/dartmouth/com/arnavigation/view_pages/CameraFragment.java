@@ -134,7 +134,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     private float[] mRotationMatrix = new float[9];
     private float magneticDeclination = 0; //initialize at 0
 
-    private float hanoverAltMeters = 528.0f; //Use Hanover's Altitude for now
+    private float hanoverAltMeters = 528.0f; //Use Hanover's Altitude for now (determining magnetic declination)
 
     TextView tv;
 
@@ -563,7 +563,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
     @Override
     public void onSensorChanged(SensorEvent event) {
 
-        //obtained this from stack overflow
         switch (event.sensor.getType()) {
             case Sensor.TYPE_ROTATION_VECTOR:
 
