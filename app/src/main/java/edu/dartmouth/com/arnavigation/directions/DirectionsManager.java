@@ -30,6 +30,11 @@ import javax.net.ssl.HttpsURLConnection;
  */
 
 public class DirectionsManager {
+
+    /**
+     * Makes calls to Directions API and gets JSON data
+     */
+
     //for URL request
     private static final String TRAVEL_MODE_WALKING = "mode_walking";
     private static final String API_KEY = "AIzaSyDCIgMjOYnQmPGmpL5AIzzfW8Uh9HwOPXc";
@@ -46,7 +51,6 @@ public class DirectionsManager {
     private List<List<HashMap<String, String>>> paths;
     private String overviewPoly;
 
-    //use this constructor for broadcasting
 
     public DirectionsManager(Context context) {
         mContext = context;
@@ -60,6 +64,7 @@ public class DirectionsManager {
         return paths;
     }
 
+    //prepares the URL for API call
     public void getDirectionsWithAddress(LatLng originLatLng, String address) {
         //create URL request string using address
         String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
@@ -71,20 +76,8 @@ public class DirectionsManager {
         startDirectionsWithURL(urlRequest);
     }
 
-    public void getDirectionsWithLatLng(LatLng originLatLng, LatLng destinationLatLng, int travelMode){
-        //for now assume travel mode is walking
-        travelMode = 0;
 
-        //create URL request string using LatLng
-        String origin = "origin=" + originLatLng.latitude + "," + originLatLng.longitude;
-        String destination = "destination=" + destinationLatLng.latitude + "," + destinationLatLng.longitude;
-        String param = origin + "&" + destination + "&" + TRAVEL_MODE_WALKING;
-        String urlRequest = HTTPS_URL + OUTPUT_TYPE + "?" + param + API_KEY;
-
-        //start directions task
-        startDirectionsWithURL(urlRequest);
-    }
-
+    //calls API and outputs a JSON-type response string
     private String requestDirectionsWithURL(String reqURL){
         //make API call with url
 
@@ -129,6 +122,7 @@ public class DirectionsManager {
         return responseString;
     }
 
+    //starts the async directions task
     private void startDirectionsWithURL(String url){
         new RequestDirectionsTask().execute(url);
     }

@@ -18,9 +18,9 @@ import java.util.List;
  */
 
 public class DirectionsParser {
-    /**
-     * Returns a list of lists containing latitude and longitude from a JSONObject
-     */
+    //returns list of lat,lng objects in a hashmap
+    //hashmap allows for other information to be stored such as elevation
+
     public List<List<HashMap<String, String>>> parse(JSONArray routeJSON) {
 
         List<List<HashMap<String, String>>> routes = new ArrayList<List<HashMap<String, String>>>();
