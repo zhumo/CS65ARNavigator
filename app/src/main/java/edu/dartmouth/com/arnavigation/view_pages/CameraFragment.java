@@ -375,19 +375,6 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             yRot = Math.asin(yRot) * 2;
             double dYrot = Math.toDegrees(yRot);
 
-            Log.d("Camera_POSE", camPose.toString());
-
-            //Log.d("CAMERA_Y_OFFSET", "Cam_QY: " + camPose.qy() + " RadYRot: " + yRot + " DegYRot: " + dYrot + " heading: " + mHeading);
-
-
-            //Pose cameraPose = frame.getCamera().getPose();
-            //Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
-
-            //float cameraYRot = (float)(Math.asin(cameraPose.qy()) * 360/Math.PI);
-            //Log.d("CAMERA_Y", "yRotation: " + cameraYRot);
-            // Handle taps. Handling only one tap per frame, as taps are usually low frequency
-            // compared to frame rate.
-
             // Get projection matrix.
             float[] projmtx = new float[16];
             camera.getProjectionMatrix(projmtx, 0, 0.1f, 2000.0f);
@@ -396,6 +383,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             float[] viewmtx = new float[16];
             camera.getViewMatrix(viewmtx, 0);
 
+            // Respond to tap events.
             MotionEvent tap = mQueuedSingleTaps.poll();
             if (tap != null && camera.getTrackingState() == TrackingState.TRACKING) {
                 float tappedXLoc = tap.getX();
@@ -416,6 +404,7 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                         placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LAT_KEY, (float) mUserLatLng.latitude);
                         placeDetailsIntent.putExtra(PlaceDetailsActivity.ORIGIN_LNG_KEY, (float) mUserLatLng.longitude);
                         startActivity(placeDetailsIntent);
+
                         // Raycasting may determine that multiple objects were tapped,
                         // esp. when objects are behind one another. Therefore, we take the first one and
                         // assume the user meant to tap it.
@@ -441,25 +430,10 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             if (isLineCreated == true){
                 Pose cameraPose = camera.getPose();
 
-                Log.d("CAMERA_POSE", "qx: " + cameraPose.qx() + " qy: " + cameraPose.qy() + " qz: " + cameraPose.qz() + " qw: " + cameraPose.qy());
-
-                Log.d("LEG_POSE", leg.getLegPose().toString());
-
-//                Pose camXZOffset = cameraPose.compose(Pose.makeRotation(0, leg.getLegPose().qy(), 0, leg.getLegPose().qw()).extractRotation());
-//                Log.d("OFFSET_POSE", camXZOffset.toString());
-//
-//                Pose offsetPose = Pose.makeInterpolated(leg.getLegPose(), camXZOffset, 0.5f);
-//                Log.d("offset_int_pose", offsetPose.toString());
-
                 Pose newPose = Pose.makeInterpolated(cameraPose, leg.getLegPose(), 1.0f);
-                Log.d("INT_POSE", "qx: "+ newPose.qx() + " qy: " + newPose.qy() + " qz: " + newPose.qz() + " qw: " + newPose.qw());
 
                 //add anchor
                 lineAnchor = mSession.createAnchor(newPose);
-
-                        //frame.getCamera().getPose().compose(Pose.makeRotation(xRot, yRot, zRot, wRot).extractRotation())));
-
-                //mAnchors.add(mSession.createAnchor(leg.getLegPose()));
 
                 isLineCreated = false; //set false so only one anchor at a time
 
@@ -474,20 +448,20 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
             // Compute lighting from average intensity of the image.
             final float lightIntensity = frame.getLightEstimate().getPixelIntensity();
 
-            // Visualize anchors created by touch.
-            float scaleFactor = 1.0f;
+            // Draw place markers created by touch.
             for (Anchor anchor : mAnchors) {
                 if (anchor.getTrackingState() != TrackingState.TRACKING) {
                     continue;
                 }
-                anchor.getPose().toMatrix(mAnchorMatrix, 0);
 
+                anchor.getPose().toMatrix(mAnchorMatrix, 0);
                 mPlaceMarker.updateModelMatrix(mAnchorMatrix, 0.01f);
                 mPlaceMarker.draw(viewmtx, projmtx, lightIntensity);
             }
 
             //draw line with its anchor
             if (isLineRendered == true) {
+                float scaleFactor = 1.0f;
                 lineAnchor.getPose().toMatrix(lineAnchorMatrix, 0);
 
                 if (isLineRotated == false){
@@ -497,13 +471,11 @@ public class CameraFragment extends Fragment implements GLSurfaceView.Renderer, 
                 else {
                     lineRenderer.updateModelMatrix(lineAnchorMatrix, scaleFactor, 0);
                 }
-                Log.d("LEG_ANCHOR_POSE", lineAnchor.getPose().toString());
                 lineRenderer.drawNoIndices(viewmtx, projmtx, lightIntensity);
             }
 
 
         } catch (Throwable t) {
-            // Avoid crashing the application due to unhandled exceptions.
             Log.e(TAG, "Exception on the OpenGL thread", t);
         }
     }
